@@ -40,8 +40,12 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
                 ws.row_dimensions[mth_row].height, ws.row_dimensions[mth_row].outlineLevel = 22, 2
                 current_row += 1
                 start_doc = current_row
-                sum_key = (direction, sub_obj, r_key)
-                val = saved_sums[sum_key] if sum_key in saved_sums else mock_data[direction][sub_obj][r_key]
+                
+                # Защищенное извлечение суммы
+                raw_data = mock_data[direction][sub_obj][r_key]
+                val = saved_sums.get((direction, sub_obj, r_key))
+                if val is None:
+                    val = raw_data[0] if isinstance(raw_data, (list, tuple)) else raw_data
                 
                 for i, d_name in enumerate(config.DOCUMENTS_LIST):
                     ws.append(["", f" • {d_name}", val if i == 0 else "", "", "", "", "", ""])
@@ -50,13 +54,19 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
                     hist_key = (direction, sub_obj, r_key, d_name)
                     if hist_key in saved_statuses:
                         old_vals = saved_statuses[hist_key]
-                        ws[f'D{current_row}'].value = old_vals
-                        ws[f'E{current_row}'].value = old_vals
-                        ws[f'F{current_row}'].value = old_vals
-                        ws[f'G{current_row}'].value = old_vals if len(old_vals) > 2 else None
+                        ws[f'D{current_row}'].value = old_vals[0] if isinstance(old_vals, (list, tuple)) else old_vals
+                        ws[f'E{current_row}'].value = old_vals[1] if isinstance(old_vals, (list, tuple)) and len(old_vals) > 1 else old_vals
+                        ws[f'F{current_row}'].value = old_vals[2] if isinstance(old_vals, (list, tuple)) and len(old_vals) > 2 else old_vals
+                        ws[f'G{current_row}'].value = old_vals[3] if isinstance(old_vals, (list, tuple)) and len(old_vals) > 3 else old_vals
                     else:
-                        def_status = mock_data[direction][sub_obj][r_key]
-                        if def_status is not None: 
+                        # Защищенное извлечение статуса (берем последний элемент, если это список/структура)
+                        if isinstance(raw_data, (list, tuple)):
+                            def_status = raw_data[-1] if len(raw_data) > 1 else None
+                        else:
+                            def_status = raw_data
+                        
+                        # Если статус не определен (None), оставляем ячейки пустыми
+                        if def_status is not None:
                             ws[f'D{current_row}'] = ws[f'E{current_row}'] = ws[f'F{current_row}'] = ws[f'G{current_row}'] = def_status
                             
                     cur_g = ws[f'G{current_row}'].value
@@ -73,10 +83,8 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
                 end_doc = current_row - 1
                 ws[f'C{mth_row}'] = f"=SUM(C{start_doc}:C{end_doc})"
                 
-                for col in ['D', 'E', 'F', 'G']: 
-                    ws[f'{col}{mth_row}'] = f"=MAX({col}{start_doc}:{col}{end_doc})"
-                # Исправленная формула: проверяет столбец G (максимальный статус) и выводит текст в H
-                ws[f'H{mth_row}'] = f'=IF(G{mth_row}=1; "[ОДОБРЕНО] Документы согласованы"; IF(G{mth_row}=2; "[В РАБОТЕ] На согласовании / проверке"; IF(G{mth_row}=3; "[ОЖИДАНИЕ] Еще не началось согласование"; "")))'
+                ws.cell(row=mth_row, column=9, value=f"=MAX(D{start_doc}:G{end_doc})")
+                ws[f'H{mth_row}'] = f'=IF(I{mth_row}=1; "[ОДОБРЕНО] Документы согласованы"; IF(I{mth_row}=2; "[В РАБОТЕ] На согласовании / проверке"; IF(I{mth_row}=3; "[ОЖИДАНИЕ] Еще не началось согласование"; "")))'
                 
                 apply_row_style(ws, mth_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, is_center_cols=True)
                 ws.cell(row=mth_row, column=3).number_format = '#,##0'
