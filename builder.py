@@ -7,7 +7,6 @@ def get_status_text(num, total):
     return "[ОДОБРЕНО] Документы согласованы" if num == 1 else "[ОЖИДАНИЕ] Ждет старта" if total == 0 else ""
 
 def apply_row_style(ws, row_idx, font, fill, border, alignment=None, is_center_cols=False):
-    # Диапазон стилизации строки расширен до 8 колонок (A-H)
     for idx in range(1, 9):
         cell = ws.cell(row=row_idx, column=idx)
         cell.font, cell.border = font, border
@@ -50,18 +49,16 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
                     
                     hist_key = (direction, sub_obj, r_key, d_name)
                     if hist_key in saved_statuses:
-                        # Поддержка сохранения истории (если старых данных 3, копируем в 4 колонки)
                         old_vals = saved_statuses[hist_key]
-                        ws[f'D{current_row}'].value = old_vals[0]
-                        ws[f'E{current_row}'].value = old_vals[1]
-                        ws[f'F{current_row}'].value = old_vals[2]
-                        ws[f'G{current_row}'].value = old_vals[2] if len(old_vals) > 2 else None
+                        ws[f'D{current_row}'].value = old_vals
+                        ws[f'E{current_row}'].value = old_vals
+                        ws[f'F{current_row}'].value = old_vals
+                        ws[f'G{current_row}'].value = old_vals if len(old_vals) > 2 else None
                     else:
                         def_status = mock_data[direction][sub_obj][r_key]
                         if def_status is not None: 
                             ws[f'D{current_row}'] = ws[f'E{current_row}'] = ws[f'F{current_row}'] = ws[f'G{current_row}'] = def_status
                             
-                    # Проверяем финальный статус по колонке G
                     cur_g = ws[f'G{current_row}'].value
                     ws[f'H{current_row}'] = get_status_text(cur_g, val) if cur_g in (1,2,3) else ("[ОЖИДАНИЕ] Ждет старта" if val == 0 else "")
                     
@@ -74,12 +71,11 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
                     current_row += 1
                     
                 end_doc = current_row - 1
-                if ws[f'G{start_doc}'].value in (1,2,3): ws[f'I{mth_row}'] = ws[f'G{start_doc}'].value
                 ws[f'C{mth_row}'] = f"=SUM(C{start_doc}:C{end_doc})"
                 
-                # Вычисление максимума теперь идет по всем четырем столбцам D, E, F, G
                 for col in ['D', 'E', 'F', 'G']: 
                     ws[f'{col}{mth_row}'] = f"=MAX({col}{start_doc}:{col}{end_doc})"
+                # Исправленная формула: проверяет столбец G (максимальный статус) и выводит текст в H
                 ws[f'H{mth_row}'] = f'=IF(G{mth_row}=1; "[ОДОБРЕНО] Документы согласованы"; IF(G{mth_row}=2; "[В РАБОТЕ] На согласовании / проверке"; IF(G{mth_row}=3; "[ОЖИДАНИЕ] Еще не началось согласование"; "")))'
                 
                 apply_row_style(ws, mth_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, is_center_cols=True)
