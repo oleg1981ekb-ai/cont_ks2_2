@@ -37,4 +37,4 @@ ALIGN_C = Alignment(horizontal="center", vertical="center", wrap_text=True)
 ALIGN_L = Alignment(horizontal="left", vertical="center", wrap_text=True)
 ALIGN_R = Alignment(horizontal="right", vertical="center")
 
-HEADERS = ["№ п/п", "Наименование объекта / Месяц / Документ", "Сумма (руб.)", "СтрК", "СДО", "ГенДир", "Текущий статус акта"]
+HEADERS = ["№ п/п", "Наименование объекта / Месяц / Документ", "Сумма (руб.)", "СтрК", "СДО", "ГенДир", "ГенДир Один экс.", "Текущий статус акта"]
