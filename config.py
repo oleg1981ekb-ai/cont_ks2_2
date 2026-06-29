@@ -1,7 +1,6 @@
 import os
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
-# Исходные данные без Января
 DATA_ROWS = [
     ("01_АНАПА (Таманская)", "271", "Февраль", 450000, 3),
     ("01_АНАПА (Таманская)", "271", "Март", 0, None),
@@ -12,12 +11,11 @@ DATA_ROWS = [
     ("01_АНАПА (Таманская)", "537", "Февраль", 0, None),
     ("01_АНАПА (Таманская)", "537", "Март", 0, None),
     ("02_ИНДУСТРИАЛЬНАЯ Краснодар", "Основной участок", "Февраль", 850000, 2),
-    ("02_ИНДУСТРИАЛЬНАЯ Краснодар", "Основной участок", "Март", 0, None)
+    ("02_ИНДУСТРИАЛЬНАЯ Краснодар", "Основной участок", "Март", 0, None),
 ]
 
-# Список месяцев теперь начинается с Февраля
-MONTHS_LIST = ["Февраль", "Март"]
-DOCUMENTS_LIST = ["Акт КС-2", "Справка КС-3", "Счет-фактура", "Счет", "Исполнительная документация"]
+MONTHS_LIST = ['Февраль', 'Март']
+DOCUMENTS_LIST = ['Акт КС-2', 'Справка КС-3', 'Счет-фактура', 'Счет', 'Исполнительная документация']
 
 FOLDER_NAME = ""
 FILE_NAME = "Трекер_Акт_Выполнения.xlsx"
@@ -33,16 +31,10 @@ FILL_HDR = FILL_DIR = PatternFill(start_color="1F4E78", end_color="1F4E78", fill
 FILL_OBJ = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
 FILL_MTH = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
 
-THIN_BORDER = Border(
-    left=Side(style='thin', color='B0B0B0'), right=Side(style='thin', color='B0B0B0'),
-    top=Side(style='thin', color='B0B0B0'), bottom=Side(style='thin', color='B0B0B0')
-)
+THIN_BORDER = Border(left=Side(style="thin", color="B0B0B0"), right=Side(style="thin", color="B0B0B0"), top=Side(style="thin", color="B0B0B0"), bottom=Side(style="thin", color="B0B0B0"))
 
 ALIGN_C = Alignment(horizontal="center", vertical="center", wrap_text=True)
 ALIGN_L = Alignment(horizontal="left", vertical="center", wrap_text=True)
 ALIGN_R = Alignment(horizontal="right", vertical="center")
 
-HEADERS = [
-    "№ п/п", "Наименование объекта / Месяц / Документ", "Сумма (руб.)", 
-    "Строительный контроль", "Сметчик заказчика", "Руководитель", "Текущий статус акта"
-]
+HEADERS = ["№ п/п", "Наименование объекта / Месяц / Документ", "Сумма (руб.)", "СтрК", "СДО", "ГенДир", "Текущий статус акта"]

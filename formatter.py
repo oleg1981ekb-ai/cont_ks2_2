@@ -24,5 +24,6 @@ def append_specifications(ws, current_row):
 
 def set_column_widths(ws):
     ws.column_dimensions['A'].width, ws.column_dimensions['B'].width, ws.column_dimensions['C'].width = 8, 55, 16
-    ws.column_dimensions['D'].width = ws.column_dimensions['E'].width = ws.column_dimensions['F'].width = 15
+    # Устанавливаем минимальную ширину 7 для СтрК, СДО, ГенДир
+    ws.column_dimensions['D'].width = ws.column_dimensions['E'].width = ws.column_dimensions['F'].width = 7
     ws.column_dimensions['G'].width = 40
