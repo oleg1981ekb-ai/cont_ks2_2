@@ -4,7 +4,8 @@ from config import MONTHS_LIST
 
 def load_historical_data(file_path):
     saved_statuses, saved_sums = {}, {}
-    if not os.path.exists(file_path):
+    # Если файла нет — сразу выходим без ошибок и создаем с нуля
+    if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
         return saved_statuses, saved_sums
     try:
         old_wb = openpyxl.load_workbook(file_path, data_only=True)
@@ -25,13 +26,16 @@ def load_historical_data(file_path):
                 st_d = old_ws.cell(row=row, column=4).value
                 st_e = old_ws.cell(row=row, column=5).value
                 st_f = old_ws.cell(row=row, column=6).value
-                if any(st in (1, 2, 3) for st in (st_d, st_e, st_f)):
-                    saved_statuses[(c_dir, c_sub, c_mth, d_name)] = (st_d, st_e, st_f)
+                st_g = old_ws.cell(row=row, column=7).value
+                # Сохраняем все 4 статуса контроля
+                if any(st in (1, 2, 3) for st in (st_d, st_e, st_f, st_g)):
+                    saved_statuses[(c_dir, c_sub, c_mth, d_name)] = (st_d, st_e, st_f, st_g)
                 if d_name == "Акт КС-2":
                     s_val = old_ws.cell(row=row, column=3).value
                     if s_val is not None: saved_sums[(c_dir, c_sub, c_mth)] = s_val
         old_wb.close()
-    except Exception: pass
+    except Exception: 
+        pass
     return saved_statuses, saved_sums
 
 def group_linear_data(data_rows):
