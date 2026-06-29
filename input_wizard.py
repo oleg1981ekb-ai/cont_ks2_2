@@ -86,7 +86,6 @@ def run_wizard():
                         current_idx -= 1
                         continue
                         
-                # Валидация специфичных полей
                 if current_idx == 3:  # Проверка суммы
                     try:
                         answers[current_idx] = int(res)
