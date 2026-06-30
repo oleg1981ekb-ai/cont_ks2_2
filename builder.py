@@ -85,21 +85,31 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
                     current_row += 1
                     
                 end_doc = current_row - 1
-                import json, os
-changes_path = 'changes.json'
-mth_label = ws.cell(row=mth_row, column=2).value
-sub_obj_label = '01_271КН' if mth_row < 16 else '01_1505КН'
-key = f'{sub_obj_label}_{mth_label}'
-current_sum = 450000.0 if mth_label == 'Февраль' else 0.0
+    import json, os
+    changes_path = 'changes.json'
+    mth_label = ws.cell(row=mth_row, column=2).value.strip()
+    
+    # Находим имя подобъекта для ключа
+    sub_obj_label = 'Unknown'
+    for r in range(mth_row - 1, -1, -1):
+        v = ws.cell(row=r, column=2).value
+        if v and 'КН' in str(v):
+            sub_obj_label = str(v).strip()
+            break
+            
+    key = f'{sub_obj_label}_{mth_label}'
+    # Базовое значение из config.py базы данных
+    current_sum = float(val) if (val is not None) else 0.0
 
-if os.path.exists(changes_path):
-    try:
-        with open(changes_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            if key in data: current_sum = data[key]['sum']
-    except: pass
-
-ws[f'C{mth_row}'] = current_sum
+    # Если макрос перехватил ручной ввод — приоритет ему
+    if os.path.exists(changes_path):
+        try:
+            with open(changes_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if key in data: 
+                    current_sum = float(data[key]['sum'])
+        except: pass
+    ws[f'C{mth_row}'] = current_sum
                 
                 # Скрытый проверочный статус уходит в 11-ю колонку K
                 ws.cell(row=mth_row, column=11, value=f"=MAX(D{start_doc}:H{end_doc})")
@@ -107,7 +117,10 @@ ws[f'C{mth_row}'] = current_sum
                 # Итоговая текстовая формула считывает данные из K и записывает результат в J
                 ws[f'J{mth_row}'] = f'=IF(K{mth_row}=1; "[ОДОБРЕНО] Документы согласованы"; IF(K{mth_row}=2; "[В РАБОТЕ] На согласовании / проверке"; IF(K{mth_row}=3; "[ОЖИДАНИЕ] Еще не началось согласование"; "")))'
                 
-                apply_row_style(ws, mth_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, is_center_cols=True)
+                from openpyxl.styles import PatternFill
+    # Мягкий пастельный мятно-зеленый цвет (HEX: E2F0D9)
+    soft_green_fill = PatternFill(start_color='E2F0D9', end_color='E2F0D9', fill_type='solid')
+    apply_row_style(ws, mth_row, config.FONT_MTH, soft_green_fill, config.THIN_BORDER, is_center_cols=True)
                 ws.cell(row=mth_row, column=3).number_format = '#,##0'
                 ws.cell(row=mth_row, column=3).alignment = config.ALIGN_R
                 
