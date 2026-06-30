@@ -1,4 +1,5 @@
 import os
+import openpyxl
 import config
 import git_deployer
 
@@ -35,6 +36,81 @@ def get_input_with_nav(prompt_text, current_step, total_steps):
     if user_input.lower() == 'назад': return 'BACK'
     return user_input
 
+def rename_sub_object():
+    print("\n>> ПЕРЕИМЕНОВАНИЕ ПОДОБЪЕКТА")
+    
+    # 1. Проверяем доступность файла Excel
+    excel_path = config.FULL_PATH
+    if os.path.exists(excel_path):
+        try:
+            f = open(excel_path, "r+")
+            f.close()
+        except IOError:
+            print(" [ОШИБКА] Файл Excel сейчас открыт в LibreOffice! Закройте его перед переименованием.")
+            return
+
+    # 2. Собираем уникальные подобъекты
+    unique_subs = sorted(list(set([row[1] for row in config.DATA_ROWS if len(row) > 1])))
+    if not unique_subs:
+        print(" В системе пока нет добавленных подобъектов.")
+        return
+
+    print("\nДоступные подобъекты:")
+    for idx, sub in enumerate(unique_subs, 1):
+        print(f"  {idx}. {sub}")
+        
+    choice = input("\nВыберите номер подобъекта для изменения (или Enter для отмены): ").strip()
+    if not choice or not choice.isdigit():
+        print(" Отменено.")
+        return
+        
+    choice_idx = int(choice) - 1
+    if choice_idx < 0 or choice_idx >= len(unique_subs):
+        print(" [ОШИБКА] Неверный номер.")
+        return
+        
+    old_name = unique_subs[choice_idx]
+    new_name = input(f"Введите новое название для '{old_name}': ").strip()
+    if not new_name:
+        print(" [ОШИБКА] Название не может быть пустым.")
+        return
+
+    # 3. Массовая замена в config.py в оперативной памяти
+    new_rows = []
+    for row in config.DATA_ROWS:
+        if row[1] == old_name:
+            # Создаем новый кортеж с измененным именем подобъекта
+            new_rows.append((row[0], new_name, row[2], row[3], row[4]))
+        else:
+            new_rows.append(row)
+            
+    save_config(new_rows, config.MONTHS_LIST, config.DOCUMENTS_LIST)
+    print(f" [УСПЕХ] Конфигурация обновлена: {old_name} -> {new_name}")
+
+    # 4. Прямая миграция истории в существующем файле Excel
+    if os.path.exists(excel_path):
+        print(" Обновление исторического файла Excel...")
+        try:
+            wb = openpyxl.load_workbook(excel_path)
+            for sheet in wb.worksheets:
+                # Ищем ячейки со значением "Подобъект <Старое имя>"
+                old_target_text = f"Подобъект {old_name}"
+                new_target_text = f"Подобъект {new_name}"
+                
+                for row in sheet.iter_rows():
+                    for cell in row:
+                        if cell.value and str(cell.value).strip() == old_target_text:
+                            cell.value = new_target_text
+            wb.save(excel_path)
+            print(" [УСПЕХ] История в Excel-файле успешно перезаписана!")
+        except Exception as e:
+            print(f" [ПРЕДУПРЕЖДЕНИЕ] Не удалось обновить старый Excel файл: {e}")
+
+    # 5. Принудительный запуск пайплайна сборки и деплоя с кастомным логом
+    print("\n Запуск фиксации изменений...")
+    custom_added_rows = [f"{old_name} -> {new_name}"]
+    git_deployer.run_production_pipeline(session_added_rows=custom_added_rows)
+
 def run_wizard():
     global session_added_rows
     while True:
@@ -45,7 +121,8 @@ def run_wizard():
         print("2. Добавить новую запись (Объект / Месяц)")
         print("3. Сгенерировать Excel (с запросом отправки на GitHub)")
         print("4. Выйти из помощника")
-        choice = input("Выберите действие (1-4): ").strip()
+        print("5. Переименовать подобъект")
+        choice = input("Выберите действие (1-5): ").strip()
         
         if choice == "1":
             print_data()
@@ -97,6 +174,8 @@ def run_wizard():
                 
         elif choice == "4":
             print("До свидания!"); break
+        elif choice == "5":
+            rename_sub_object()
         else:
             print(" Неверный ввод.")
 
