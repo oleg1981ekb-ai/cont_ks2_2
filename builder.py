@@ -54,7 +54,7 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
                     hist_key = (direction, sub_obj, r_key, d_name)
                     if hist_key in saved_statuses:
                         old_vals = saved_statuses[hist_key]
-                        ws[f'D{current_row}'].value = old_vals if isinstance(old_vals, (list, tuple)) else old_vals
+                        ws[f"D{current_row}"].value = old_vals[0] if isinstance(old_vals, (list, tuple)) and len(old_vals) > 0 else old_vals
                         ws[f'E{current_row}'].value = old_vals if isinstance(old_vals, (list, tuple)) and len(old_vals) > 1 else old_vals
                         ws[f'F{current_row}'].value = old_vals if isinstance(old_vals, (list, tuple)) and len(old_vals) > 2 else old_vals
                         ws[f'G{current_row}'].value = old_vals if isinstance(old_vals, (list, tuple)) and len(old_vals) > 3 else old_vals
