@@ -1,7 +1,8 @@
 import os
-import json
-import subprocess
 import config
+import git_deployer
+
+session_added_rows = []
 
 def save_config(data_rows, months, docs):
     with open("config.py", "w", encoding="utf-8") as f:
@@ -24,7 +25,7 @@ def save_config(data_rows, months, docs):
 def print_data():
     print("\n=== ТЕКУЩИЕ ЗАПИСИ В СИСТЕМЕ ===")
     for i, r in enumerate(config.DATA_ROWS, 1):
-        print(f"{i}. Направление: {r} | Подобъект: {r} | Месяц: {r} | Сумма: {r:,} руб. | Статус: {r}")
+        print(f"{i}. Направление: {r[0]} | Подобъект: {r[1]} | Месяц: {r[2]} | Сумма: {r[3]:,} руб. | Статус: {r[4]}")
     print("================================")
 
 def get_input_with_nav(prompt_text, current_step, total_steps):
@@ -34,17 +35,8 @@ def get_input_with_nav(prompt_text, current_step, total_steps):
     if user_input.lower() == 'назад': return 'BACK'
     return user_input
 
-def clear_changes_json():
-    json_path = "changes.json"
-    if os.path.exists(json_path):
-        try:
-            with open(json_path, "w", encoding="utf-8") as f:
-                json.dump({}, f)
-            print(" [ОЧИСТКА] Буфер временных изменений changes.json успешно очищен.")
-        except Exception as e:
-            print(f" [ПРЕДУПРЕЖДЕНИЕ] Не удалось очистить changes.json: {e}")
-
 def run_wizard():
+    global session_added_rows
     while True:
         import importlib
         importlib.reload(config)
@@ -87,40 +79,21 @@ def run_wizard():
                 current_idx += 1
                 
             if not cancelled:
+                new_row = (answers[0], answers[1], answers[2], answers[3], answers[4])
                 new_rows = list(config.DATA_ROWS)
-                new_rows.append((answers, answers, answers, answers, answers))
+                new_rows.append(new_row)
+                session_added_rows.append(new_row)
+                
                 new_months = list(config.MONTHS_LIST)
-                if answers not in new_months: new_months.append(answers)
+                if answers[2] not in new_months: new_months.append(answers[2])
                 save_config(new_rows, new_months, config.DOCUMENTS_LIST)
                 print(" Запись успешно сохранена!")
                 
         elif choice == "3":
-            print("\n Шаг 1: Запуск локальной генерации таблицы...")
             save_config(list(config.DATA_ROWS), list(config.MONTHS_LIST), list(config.DOCUMENTS_LIST))
-            
-            result = subprocess.run(["python3", "main.py"])
-            
-            if result.returncode != 0:
-                print(" [ОШИБКА] Сборка завершилась неудачно. Отправка в репозиторий заблокирована.")
-                continue
-                
-            print("\n Шаг 2: Запрос синхронизации с облаком")
-            push_choice = input("Выгрузить обновленный трекер в репозиторий GitHub? (да/нет): ").strip().lower()
-            
-            if push_choice in ("да", "y", "yes"):
-                print(" Синхронизация с репозиторием GitHub...")
-                subprocess.run(["git", "add", "."])
-                subprocess.run(["git", "commit", "-m", "Auto-update tracker table and structures"])
-                push_res = subprocess.run(["git", "push", "origin", "main"])
-                
-                if push_res.returncode == 0:
-                    print(" [УСПЕХ] Все файлы успешно отправлены на GitHub!")
-                    clear_changes_json()
-                else:
-                    print(" [ОШИБКА GIT] Не удалось отправить файлы в облако. Проверьте сеть или доступы.")
-            else:
-                print(" [ИНФО] Изменения сохранены только локально на Mac. Выгрузка отменена.")
-                clear_changes_json()
+            success = git_deployer.run_production_pipeline(session_added_rows)
+            if success:
+                session_added_rows = []
                 
         elif choice == "4":
             print("До свидания!"); break
