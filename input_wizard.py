@@ -3,7 +3,7 @@ import subprocess
 import config
 
 def save_config(data_rows, months, docs):
-    """Генерирует чистый config.py без синтаксических склеек строк"""
+    """Генерирует чистый config.py с обновленным составом столбцов"""
     with open("config.py", "w", encoding="utf-8") as f:
         f.write('import os\nfrom openpyxl.styles import Font, Alignment, PatternFill, Border, Side\n\n')
         f.write('DATA_ROWS = [\n')
@@ -19,8 +19,8 @@ def save_config(data_rows, months, docs):
         f.write('FILL_OBJ = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")\nFILL_MTH = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")\n\n')
         f.write('THIN_BORDER = Border(left=Side(style="thin", color="B0B0B0"), right=Side(style="thin", color="B0B0B0"), top=Side(style="thin", color="B0B0B0"), bottom=Side(style="thin", color="B0B0B0"))\n\n')
         f.write('ALIGN_C = Alignment(horizontal="center", vertical="center", wrap_text=True)\nALIGN_L = Alignment(horizontal="left", vertical="center", wrap_text=True)\nALIGN_R = Alignment(horizontal="right", vertical="center")\n\n')
-        # Идеальные короткие заголовки с колонкой 1 экз.
-        f.write('HEADERS = ["№ п/п", "Наименование объекта / Месяц / Документ", "Сумма (руб.)", "СтрК", "СДО", "ГенДир", "1 экз.", "Текущий статус акта"]\n')
+        # Внедрены столбцы 1 экз. З. и 1 экз. П
+        f.write('HEADERS = ["№ п/п", "Наименование объекта / Месяц / Документ", "Сумма (руб.)", "СтрК", "СДО", "ГенДир", "1 экз. З.", "1 экз. П", "Текущий статус акта"]\n')
 
 def print_data():
     print("\n=== ТЕКУЩИЕ ЗАПИСИ В СИСТЕМЕ ===")
@@ -88,7 +88,7 @@ def run_wizard():
             subprocess.run(["python3", "main.py"])
             print("📦 Синхронизация с репозиторием GitHub...")
             subprocess.run(["git", "add", "."])
-            subprocess.run(["git", "commit", "-m", "Fix: 508 formula error and 1ex column layout"])
+            subprocess.run(["git", "commit", "-m", "Added 1ex Z and 1ex P column layout"])
             subprocess.run(["git", "push", "origin", "main"])
             print("🚀 Всё готово! Excel обновлен, код отправлен на GitHub.")
         elif choice == "4":
