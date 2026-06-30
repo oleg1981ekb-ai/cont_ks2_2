@@ -27,7 +27,7 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
         
         for sub_obj in mock_data[direction].keys():
             obj_row = current_row
-            ws.append(["", f" Подобъект {sub_obj}", "", "", "", "", "", "", "", ""])
+            ws.append(["", f"01_{sub_obj}КН", "", "", "", "", "", "", "", ""])
             ws.row_dimensions[current_row].height, ws.row_dimensions[current_row].outlineLevel = 24, 1
             apply_row_style(ws, current_row, config.FONT_OBJ, config.FILL_OBJ, config.THIN_BORDER, is_center_cols=True)
             current_row += 1
@@ -99,7 +99,7 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
                 
             if mth_rows: ws[f'C{obj_row}'] = "=" + "+".join([f"C{m}" for m in mth_rows])
         end_dir_body = current_row - 1
-        sub_obj_rows = [r for r in range(start_dir_body, end_dir_body) if ws.cell(row=r, column=2).value and str(ws.cell(row=r, column=2).value).startswith(" Подобъект")]
+        sub_obj_rows = [r for r in range(start_dir_body, end_dir_body) if ws.cell(row=r, column=2).value and str(ws.cell(row=r, column=2).value).endswith("КН")]
         if sub_obj_rows: ws[f'C{dir_row}'] = "=" + "+".join([f"C{s}" for s in sub_obj_rows])
         item_id += 1
     return current_row
