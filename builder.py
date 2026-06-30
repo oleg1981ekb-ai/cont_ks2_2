@@ -13,27 +13,34 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
 def build_structure(ws, mock_data, saved_statuses, saved_sums):
     """
     Генерирует структуру табличной части.
-    Исправлено извлечение сумм [450000, 3] -> 450000.
+    Внедряет outline_level для группировки (уровней структуры) в LibreOffice Calc.
     """
+    # Настройка отображения кнопок группировки СВЕРХУ над блоками (удобно для структуры)
+    ws.sheet_properties.outlinePr.summaryBelow = False
+
     # Очищаем дефолтный лист перед заполнением, если он пустой
     if ws.max_row == 1 and ws.cell(row=1, column=1).value is None:
         ws.append(config.HEADERS)
         apply_row_style(ws, 1, config.FONT_HDR, config.FILL_HDR, config.THIN_BORDER, config.ALIGN_C)
     
     for direction in mock_data.keys():
-        # Смещаем Направление во вторую ячейку (столбец B)
+        # Направление: Уровень 0 (Главный)
         ws.append(["", str(direction), "", "", "", "", "", "", "", ""])
-        apply_row_style(ws, ws.max_row, config.FONT_DIR, config.FILL_DIR, config.THIN_BORDER, config.ALIGN_L)
+        current_row = ws.max_row
+        apply_row_style(ws, current_row, config.FONT_DIR, config.FILL_DIR, config.THIN_BORDER, config.ALIGN_L)
+        ws.row_dimensions[current_row].outline_level = 0
         
         for sub_obj in mock_data[direction].keys():
+            # Подобъект: Уровень 1
             ws.append(["", str(sub_obj), "", "", "", "", "", "", "", ""])
-            apply_row_style(ws, ws.max_row, config.FONT_OBJ, config.FILL_OBJ, config.THIN_BORDER, config.ALIGN_L)
+            current_row = ws.max_row
+            apply_row_style(ws, current_row, config.FONT_OBJ, config.FILL_OBJ, config.THIN_BORDER, config.ALIGN_L)
+            ws.row_dimensions[current_row].outline_level = 1
             
             for r_key in config.MONTHS_LIST:
                 if r_key not in mock_data[direction][sub_obj]: continue
                 raw_data = mock_data[direction][sub_obj][r_key]
                 
-                # ИСПРАВЛЕНО: Строго извлекаем только число суммы из массива/кортежа
                 if isinstance(raw_data, (list, tuple)) and len(raw_data) > 0:
                     clean_sum = raw_data[0]
                 else:
@@ -43,11 +50,13 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
                 if val is None:
                     val = clean_sum
                 
-                # Добавляем строку месяца с чистым числом суммы
+                # Месяц: Уровень 2
                 ws.append(["", r_key, val, "", "", "", "", "", "", ""])
-                apply_row_style(ws, ws.max_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, config.ALIGN_L)
+                current_row = ws.max_row
+                apply_row_style(ws, current_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, config.ALIGN_L)
+                ws.row_dimensions[current_row].outline_level = 2
                 
-                # Добавляем строки документов
+                # Документы: Уровень 3
                 for d_name in config.DOCUMENTS_LIST:
                     hist_key = (direction, sub_obj, r_key, d_name)
                     st = saved_statuses.get(hist_key, ("", "", "", "", "", ""))
@@ -61,7 +70,9 @@ def build_structure(ws, mock_data, saved_statuses, saved_sums):
                     
                     doc_row = ["", f"• {d_name}", clean_sum, s0, s1, s2, s3, s4, s5, ""]
                     ws.append(doc_row)
-                    apply_row_style(ws, ws.max_row, config.FONT_DATA, None, config.THIN_BORDER, config.ALIGN_L)
+                    current_row = ws.max_row
+                    apply_row_style(ws, current_row, config.FONT_DATA, None, config.THIN_BORDER, config.ALIGN_L)
+                    ws.row_dimensions[current_row].outline_level = 3
                     
     # Блок восстановления формул и статусов по индексам D-J
     for row in range(2, ws.max_row + 1):
