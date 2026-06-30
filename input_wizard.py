@@ -3,7 +3,6 @@ import subprocess
 import config
 
 def save_config(data_rows, months, docs):
-    """Генерирует чистый config.py с обновленным составом столбцов"""
     with open("config.py", "w", encoding="utf-8") as f:
         f.write('import os\nfrom openpyxl.styles import Font, Alignment, PatternFill, Border, Side\n\n')
         f.write('DATA_ROWS = [\n')
@@ -19,13 +18,13 @@ def save_config(data_rows, months, docs):
         f.write('FILL_OBJ = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")\nFILL_MTH = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")\n\n')
         f.write('THIN_BORDER = Border(left=Side(style="thin", color="B0B0B0"), right=Side(style="thin", color="B0B0B0"), top=Side(style="thin", color="B0B0B0"), bottom=Side(style="thin", color="B0B0B0"))\n\n')
         f.write('ALIGN_C = Alignment(horizontal="center", vertical="center", wrap_text=True)\nALIGN_L = Alignment(horizontal="left", vertical="center", wrap_text=True)\nALIGN_R = Alignment(horizontal="right", vertical="center")\n\n')
-        # Внедрены столбцы 1 экз. З. и 1 экз. П
-        f.write('HEADERS = ["№ п/п", "Наименование объекта / Месяц / Документ", "Сумма (руб.)", "СтрК", "СДО", "ГенДир", "1 экз. З.", "1 экз. П", "Текущий статус акта"]\n')
+        # Опл. перемещен на 9-ю позицию (после 1 экз. П)
+        f.write('HEADERS = ["№ п/п", "Наименование объекта / Месяц / Документ", "Сумма (руб.)", "СтрК", "СДО", "ГенДир", "1 экз. З.", "1 экз. П", "Опл.", "Текущий статус акта"]\n')
 
 def print_data():
     print("\n=== ТЕКУЩИЕ ЗАПИСИ В СИСТЕМЕ ===")
     for i, r in enumerate(config.DATA_ROWS, 1):
-        print(f"{i}. Направление: {r[0]} | Подобъект: {r[1]} | Месяц: {r[2]} | Сумма: {r[3]} руб. | Статус: {r[4]}")
+        print(f"{i}. Направление: {r} | Подобъект: {r} | Месяц: {r} | Сумма: {r} руб. | Status: {r}")
     print("================================")
 
 def get_input_with_nav(prompt_text, current_step, total_steps):
@@ -77,9 +76,9 @@ def run_wizard():
                 current_idx += 1
             if not cancelled:
                 new_rows = list(config.DATA_ROWS)
-                new_rows.append((answers[0], answers[1], answers[2], answers[3], answers[4]))
+                new_rows.append((answers, answers, answers, answers, answers))
                 new_months = list(config.MONTHS_LIST)
-                if answers[2] not in new_months: new_months.append(answers[2])
+                if answers not in new_months: new_months.append(answers)
                 save_config(new_rows, new_months, config.DOCUMENTS_LIST)
                 print("✅ Запись успешно сохранена!")
         elif choice == "3":
@@ -88,7 +87,7 @@ def run_wizard():
             subprocess.run(["python3", "main.py"])
             print("📦 Синхронизация с репозиторием GitHub...")
             subprocess.run(["git", "add", "."])
-            subprocess.run(["git", "commit", "-m", "Added 1ex Z and 1ex P column layout"])
+            subprocess.run(["git", "commit", "-m", "Moved Payment column next to 1exP"])
             subprocess.run(["git", "push", "origin", "main"])
             print("🚀 Всё готово! Excel обновлен, код отправлен на GitHub.")
         elif choice == "4":

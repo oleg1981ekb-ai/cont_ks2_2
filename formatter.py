@@ -7,7 +7,7 @@ def apply_conditional_formatting(ws):
     f_ylw = config.PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
     f_red = config.PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
     font_grn, font_ylw, font_red = Font(name="Calibri", size=11, color="006100"), Font(name="Calibri", size=11, color="9C6500"), Font(name="Calibri", size=11, color="9C0006")
-    # Диапазон условного форматирования теперь охватывает столбцы D, E, F, G, H
+    # Цветовые статусы теперь занимают ячейки D, E, F, G, H
     ws.conditional_formatting.add("D2:H1000", CellIsRule(operator='equal', formula=['1'], fill=f_grn, font=font_grn))
     ws.conditional_formatting.add("D2:H1000", CellIsRule(operator='equal', formula=['2'], fill=f_ylw, font=font_ylw))
     ws.conditional_formatting.add("D2:H1000", CellIsRule(operator='equal', formula=['3'], fill=f_red, font=font_red))
@@ -25,7 +25,8 @@ def append_specifications(ws, current_row):
 
 def set_column_widths(ws):
     ws.column_dimensions['A'].width, ws.column_dimensions['B'].width, ws.column_dimensions['C'].width = 8, 55, 16
-    # 5 статусных столбцов (D, E, F, G, H) с минимальной шириной 7
     ws.column_dimensions['D'].width = ws.column_dimensions['E'].width = ws.column_dimensions['F'].width = ws.column_dimensions['G'].width = ws.column_dimensions['H'].width = 7
-    # Текстовый статус теперь живет в столбце I
-    ws.column_dimensions['I'].width = 40
+    # Столбец I (Опл.) делаем компактным (ширина 10)
+    ws.column_dimensions['I'].width = 10
+    # Столбец J (Текущий статус акта) делаем широким (ширина 40)
+    ws.column_dimensions['J'].width = 40
