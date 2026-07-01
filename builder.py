@@ -15,9 +15,10 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
 def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     """
     Генерирует структуру табличной части напрямую из базы данных database.json.
-    Автоматически закрепляет верхнюю строку, накладывает маски и форматирует суммы.
+    Автоматически закрепляет верхнюю строку, накладывает маски, форматирует суммы
+    и добавляет сквозную нумерацию периодов в первый столбец.
     """
-    # ЗАКРЕПЛЕНИЕ СТРОКИ: Фиксирует строку 1 (все строки выше ячейки А2)
+    # Фиксируем строку 1 (все строки выше ячейки А2)
     ws.freeze_panes = "A2"
 
     # Настройка кнопок группировки СВЕРХУ над блоками
@@ -36,14 +37,19 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     with open(json_path, "r", encoding="utf-8") as f:
         db = json.load(f)
 
+    # Инициализация сквозного счетчика периодов для столбца А
+    row_counter = 1
+
     # Строим таблицу на основе дерева JSON
     for direction in db.keys():
+        # Направление (Уровень 0): Столбец А пустой
         ws.append(["", str(direction), "", "", "", "", "", "", "", ""])
         current_row = ws.max_row
         apply_row_style(ws, current_row, config.FONT_DIR, config.FILL_DIR, config.THIN_BORDER, config.ALIGN_L)
         ws.row_dimensions[current_row].outline_level = 0
         
         for sub_obj in db[direction].keys():
+            # Подобъект (Уровень 1): Столбец А пустой
             ws.append(["", str(sub_obj), "", "", "", "", "", "", "", ""])
             current_row = ws.max_row
             apply_row_style(ws, current_row, config.FONT_OBJ, config.FILL_OBJ, config.THIN_BORDER, config.ALIGN_L)
@@ -57,14 +63,21 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                 val = mth_data.get("sum", 0.0)
                 status_val = mth_data.get("status", "")
                 
-                ws.append(["", mth, float(val), "", "", "", "", "", "", ""])
+                # Месяц (Уровень 2): Записываем ТЕКУЩИЙ НОМЕР и сдвигаем счетчик на +1
+                ws.append([row_counter, mth, float(val), "", "", "", "", "", "", ""])
                 current_row = ws.max_row
                 apply_row_style(ws, current_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, config.ALIGN_L)
+                
+                # Выравниваем порядковый номер по центру ячейки
+                ws.cell(row=current_row, column=1).alignment = config.ALIGN_C
+                
                 ws.row_dimensions[current_row].outline_level = 2
+                row_counter += 1 # Увеличиваем счетчик для следующего месяца
                 
                 money_cell = ws.cell(row=current_row, column=3)
                 money_cell.number_format = '#,##0.00'
                 
+                # Документы (Уровень 3): Столбец А пустой
                 for d_name in config.DOCUMENTS_LIST:
                     doc_row = ["", f"• {d_name}", "", "", "", "", "", "", "", ""]
                     ws.append(doc_row)
