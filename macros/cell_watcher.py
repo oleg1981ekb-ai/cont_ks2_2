@@ -3,55 +3,61 @@ import os
 
 def log_cell_change(event):
     """
-    Макрос LibreOffice Calc. Срабатывает при изменении содержимого ячейки.
-    Записывает измененную сумму месяца во временный файл проекта changes.json.
+    Глобальный макрос LibreOffice Calc. Срабатывает при сохранении документа.
+    Сканирует активный лист, собирает суммы месяцев и пишет в changes.json.
     """
     try:
-        # Проверяем, что событие произошло на листе таблицы
-        sheet = event.Spreadsheet
+        model = event.Source
+        sheet = model.CurrentController.ActiveSheet
         
-        # Получаем координаты измененной ячейки (отсчет с 0)
-        column_idx = event.CellAddress.Column  # Столбец
-        row_idx = event.CellAddress.Row        # Строка
+        valid_months = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", 
+                        "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
         
-        # Нам нужен только столбец C (индекс 2) — Сумма (руб.)
-        if column_idx != 2:
-            return
-
-        # Считываем новое значение суммы и текстовый маркер строки (название месяца/объекта)
-        new_value = event.Value
-        row_label = sheet.getCellByPosition(1, row_idx).String  # Столбец B (индекс 1)
-        
-        # Исключаем служебные строки (шапку, пустые ячейки или строки главных объектов)
-        if not row_label or "Сумма" in row_label or "№" in row_label:
-            return
-
-        # Путь к файлу изменений в папке проекта
+        changes = {}
         project_dir = "/Users/test/Desktop/cont_ks2_2"
         json_path = os.path.join(project_dir, "changes.json")
         
-        # Загружаем существующую историю изменений, если она есть
-        changes = {}
         if os.path.exists(json_path):
             try:
                 with open(json_path, "r", encoding="utf-8") as f:
                     changes = json.load(f)
             except:
                 pass
-                
-        # Сохраняем или обновляем сумму для конкретной строки
-        changes[str(row_idx)] = {
-            "label": row_label.strip(),
-            "sum": float(new_value) if new_value else 0.0
-        }
+
+        direction = ""
+        sub_obj = ""
         
-        # Записываем обновленный буфер обратно на диск
+        for r_idx in range(1, 300):
+            lbl = str(sheet.getCellByPosition(1, r_idx).String).strip()
+            if not lbl:
+                continue
+                
+            if lbl.startswith("01_") or lbl.startswith("02_"):
+                direction = lbl
+                sub_obj = "" 
+                continue
+                
+            if (lbl.startswith("•") or lbl.startswith("Акт") or lbl.startswith("Справка") or 
+                lbl.startswith("Счет") or lbl == "Наименование объекта / Месяц / Документ"):
+                continue
+                
+            if lbl in valid_months:
+                val_cell = sheet.getCellByPosition(2, r_idx).Value
+                if direction and sub_obj:
+                    storage_key = f"{direction}||{sub_obj}||{lbl}"
+                    changes[storage_key] = {
+                        "direction": direction,
+                        "sub_obj": sub_obj,
+                        "month": lbl,
+                        "sum": float(val_cell) if val_cell else 0.0
+                    }
+            else:
+                sub_obj = lbl
+
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(changes, f, ensure_ascii=False, indent=4)
-            
-    except Exception as e:
-        # В случае ошибки внутри макроса мы не прерываем работу LibreOffice
+
+    except Exception:
         pass
 
-# Регистрируем функцию в LibreOffice, чтобы она была видна в меню выбора макросов
 g_exportedScripts = (log_cell_change,)
