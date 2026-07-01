@@ -1,181 +1,123 @@
 import os
-import openpyxl
+import json
 import config
 import git_deployer
 
-session_added_rows = []
+def load_db():
+    json_path = "database.json"
+    if os.path.exists(json_path):
+        with open(json_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
 
-def save_config(data_rows, months, docs):
-    with open("config.py", "w", encoding="utf-8") as f:
-        f.write('import os\nfrom openpyxl.styles import Font, Alignment, PatternFill, Border, Side\n\n')
-        f.write('DATA_ROWS = [\n')
-        for row in data_rows:
-            f.write(f'    {repr(row)},\n')
-        f.write(']\n\n')
-        f.write(f'MONTHS_LIST = {repr(months)}\n')
-        f.write(f'DOCUMENTS_LIST = {repr(docs)}\n\n')
-        f.write('FOLDER_NAME = ""\nFILE_NAME = "Трекер_Акт_Выполнения.xlsx"\nFULL_PATH = os.path.join(FOLDER_NAME, FILE_NAME)\n\n')
-        f.write('FONT_HDR = Font(name="Calibri", size=11, bold=True, color="FFFFFF")\nFONT_DIR = Font(name="Calibri", size=12, bold=True, color="FFFFFF")\n')
-        f.write('FONT_OBJ = Font(name="Calibri", size=11, bold=True, color="000000")\nFONT_MTH = Font(name="Calibri", size=11, bold=True, italic=True, color="000000")\n')
-        f.write('FONT_DATA = Font(name="Calibri", size=11)\n\nFILL_HDR = FILL_DIR = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")\n')
-        f.write('FILL_OBJ = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")\nFILL_MTH = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")\n\n')
-        f.write('THIN_BORDER = Border(left=Side(style="thin", color="B0B0B0"), right=Side(style="thin", color="B0B0B0"), top=Side(style="thin", color="B0B0B0"), bottom=Side(style="thin", color="B0B0B0"))\n\n')
-        f.write('ALIGN_C = Alignment(horizontal="center", vertical="center", wrap_text=True)\nALIGN_L = Alignment(horizontal="left", vertical="center", wrap_text=True)\nALIGN_R = Alignment(horizontal="right", vertical="center")\n\n')
-        f.write('HEADERS = ["№ п/п", "Наименование объекта / Месяц / Документ", "Сумма (руб.)", "СтрК", "СДО", "ГенДир", "1 экз. З.", "1 экз. П", "Опл.", "Текущий статус акта"]\n')
+def save_db(db):
+    json_path = "database.json"
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(db, f, ensure_ascii=False, indent=4)
 
 def print_data():
-    print("\n=== ТЕКУЩИЕ ЗАПИСИ В СИСТЕМЕ ===")
-    for i, r in enumerate(config.DATA_ROWS, 1):
-        print(f"{i}. Направление: {r[0]} | Подобъект: {r[1]} | Месяц: {r[2]} | Сумма: {r[3]:,} руб. | Статус: {r[4]}")
-    print("================================")
+    db = load_db()
+    print("\n=== ТЕКУЩАЯ БАЗА ДАННЫХ ПРОЕКТА ===")
+    if not db:
+        print("База данных пуста.")
+        return
+    for direction, sub_objs in db.items():
+        print(f"\n Направление: {direction}")
+        for sub_obj, months in sub_objs.items():
+            print(f"   └─ Подобъект: {sub_obj}")
+            for mth, data in months.items():
+                print(f"        ├─ {mth}: {data.get('sum', 0):,} руб. | Статус СтрК: {data.get('status', 'Нет')}")
+    print("====================================")
 
-def get_input_with_nav(prompt_text, current_step, total_steps):
-    full_prompt = f"{prompt_text} (или 'назад'/'выход'): "
-    user_input = input(full_prompt).strip()
-    if user_input.lower() == 'выход': return 'EXIT'
-    if user_input.lower() == 'назад': return 'BACK'
-    return user_input
+def edit_month_sum():
+    print("\n>> РЕДАКТИРОВАНИЕ СУММЫ МЕСЯЦА")
+    db = load_db()
+    if not db:
+        print(" База данных пуста.")
+        return
 
-def rename_sub_object():
-    print("\n>> ПЕРЕИМЕНОВАНИЕ ПОДОБЪЕКТА")
+    # 1. Выбор Направления
+    directions = list(db.keys())
+    print("\nДоступные Направления:")
+    for idx, d in enumerate(directions, 1):
+        print(f"  {idx}. {d}")
+    d_choice = input("\nВыберите номер Направления (или Enter для отмены): ").strip()
+    if not d_choice or not d_choice.isdigit(): return
+    d_idx = int(d_choice) - 1
+    if d_idx < 0 or d_idx >= len(directions): return
+    target_dir = directions[d_idx]
+
+    # 2. Выбор Подобъекта
+    sub_objs = list(db[target_dir].keys())
+    print(f"\nДоступные Подобъекты для '{target_dir}':")
+    for idx, s in enumerate(sub_objs, 1):
+        print(f"  {idx}. {s}")
+    s_choice = input("\nВыберите номер Подобъекта: ").strip()
+    if not s_choice or not s_choice.isdigit(): return
+    s_idx = int(s_choice) - 1
+    if s_idx < 0 or s_idx >= len(sub_objs): return
+    target_sub = sub_objs[s_idx]
+
+    # 3. Выбор Месяца
+    months = list(db[target_dir][target_sub].keys())
+    print(f"\nДоступные Месяцы для '{target_sub}':")
+    for idx, m in enumerate(months, 1):
+        print(f"  {idx}. {m} (Текущая сумма: {db[target_dir][target_sub][m].get('sum', 0):,} руб.)")
+    m_choice = input("\nВыберите номер Месяца: ").strip()
+    if not m_choice or not m_choice.isdigit(): return
+    m_idx = int(m_choice) - 1
+    if m_idx < 0 or m_idx >= len(months): return
+    target_mth = months[m_idx]
+
+    # 4. Ввод новой суммы
+    new_sum_str = input(f"Введите новую сумму для {target_mth} (цифрами, без пробелов): ").strip()
+    try:
+        new_sum = int(new_sum_str)
+        db[target_dir][target_sub][target_mth]["sum"] = new_sum
+        save_db(db)
+        print(f" [УСПЕХ] Сумма успешно обновлена в базе данных для {target_mth}: {new_sum:,} руб.")
+    except ValueError:
+        print(" [ОШИБКА] Сумма должна быть числом!")
+
+def add_new_record():
+    print("\n>> ДОБАВЛЕНИЕ НОВОЙ ЗАПИСИ (СТРУКТУРЫ)")
+    db = load_db()
     
-    # 1. Проверяем доступность файла Excel
-    excel_path = config.FULL_PATH
-    if os.path.exists(excel_path):
-        try:
-            f = open(excel_path, "r+")
-            f.close()
-        except IOError:
-            print(" [ОШИБКА] Файл Excel сейчас открыт в LibreOffice! Закройте его перед переименованием.")
-            return
-
-    # 2. Собираем уникальные подобъекты
-    unique_subs = sorted(list(set([row[1] for row in config.DATA_ROWS if len(row) > 1])))
-    if not unique_subs:
-        print(" В системе пока нет добавленных подобъектов.")
-        return
-
-    print("\nДоступные подобъекты:")
-    for idx, sub in enumerate(unique_subs, 1):
-        print(f"  {idx}. {sub}")
-        
-    choice = input("\nВыберите номер подобъекта для изменения (или Enter для отмены): ").strip()
-    if not choice or not choice.isdigit():
-        print(" Отменено.")
-        return
-        
-    choice_idx = int(choice) - 1
-    if choice_idx < 0 or choice_idx >= len(unique_subs):
-        print(" [ОШИБКА] Неверный номер.")
-        return
-        
-    old_name = unique_subs[choice_idx]
-    new_name = input(f"Введите новое название для '{old_name}': ").strip()
-    if not new_name:
-        print(" [ОШИБКА] Название не может быть пустым.")
-        return
-
-    # 3. Массовая замена в config.py в оперативной памяти
-    new_rows = []
-    for row in config.DATA_ROWS:
-        if row[1] == old_name:
-            # Создаем новый кортеж с измененным именем подобъекта
-            new_rows.append((row[0], new_name, row[2], row[3], row[4]))
-        else:
-            new_rows.append(row)
-            
-    save_config(new_rows, config.MONTHS_LIST, config.DOCUMENTS_LIST)
-    print(f" [УСПЕХ] Конфигурация обновлена: {old_name} -> {new_name}")
-
-    # 4. Прямая миграция истории в существующем файле Excel
-    if os.path.exists(excel_path):
-        print(" Обновление исторического файла Excel...")
-        try:
-            wb = openpyxl.load_workbook(excel_path)
-            for sheet in wb.worksheets:
-                # Ищем ячейки со значением "Подобъект <Старое имя>"
-                old_target_text = f"Подобъект {old_name}"
-                new_target_text = f"Подобъект {new_name}"
-                
-                for row in sheet.iter_rows():
-                    for cell in row:
-                        if cell.value and str(cell.value).strip() == old_target_text:
-                            cell.value = new_target_text
-            wb.save(excel_path)
-            print(" [УСПЕХ] История в Excel-файле успешно перезаписана!")
-        except Exception as e:
-            print(f" [ПРЕДУПРЕЖДЕНИЕ] Не удалось обновить старый Excel файл: {e}")
-
-    # 5. Принудительный запуск пайплайна сборки и деплоя с кастомным логом
-    print("\n Запуск фиксации изменений...")
-    custom_added_rows = [f"{old_name} -> {new_name}"]
-    git_deployer.run_production_pipeline(session_added_rows=custom_added_rows)
+    direction = input("Введите Направление (например, 01_АНАПА (Таманская)): ").strip()
+    if not direction: return
+    sub_obj = input("Введите Подобъект (например, 01_271_КН): ").strip()
+    if not sub_obj: return
+    month = input("Введите Месяц (например, Апрель): ").strip()
+    if not month: return
+    
+    if direction not in db: db[direction] = {}
+    if sub_obj not in db[direction]: db[direction][sub_obj] = {}
+    
+    db[direction][sub_obj][month] = {"sum": 0, "status": ""}
+    save_db(db)
+    print(" [УСПЕХ] Новая ветка структуры успешно добавлена в базу данных!")
 
 def run_wizard():
-    global session_added_rows
     while True:
-        import importlib
-        importlib.reload(config)
-        print("\n--- СМАРТ-ПОМОЩНИК УПРАВЛЕНИЯ ТРЕКЕРОМ ---")
-        print("1. Посмотреть текущие записи данных")
-        print("2. Добавить новую запись (Объект / Месяц)")
-        print("3. Сгенерировать Excel (с запросом отправки на GitHub)")
-        print("4. Выйти из помощника")
-        print("5. Переименовать подобъект")
+        print("\n--- СМАРТ-ПОМОЩНИК УПРАВЛЕНИЯ ТРЕКЕРОМ (JSON БАЗА) ---")
+        print("1. Посмотреть текущую базу данных (Дерево)")
+        print("2. Добавить новую ветку структуры (Объект/Месяц)")
+        print("3. Изменить сумму существующего месяца (Ввод бюджетов)")
+        print("4. Сгенерировать Excel (с запросом отправки на GitHub)")
+        print("5. Выйти из помощника")
         choice = input("Выберите действие (1-5): ").strip()
         
         if choice == "1":
             print_data()
         elif choice == "2":
-            print("\n>> ДОБАВЛЕНИЕ НОВОЙ ЗАПИСИ")
-            steps = [
-                "1. Введите Направление (например, 01_АНАПА (Таманская))",
-                "2. Введите Подобъект (например, 271)",
-                "3. Введите Месяц (например, Апрель)",
-                "4. Введите Сумму цифрами (без пробелов)",
-                "5. Выберите стартовый статус (1-3, или 0 - Нет статуса)"
-            ]
-            answers = [""] * 5
-            current_idx, cancelled = 0, False
-            while current_idx < len(steps):
-                res = get_input_with_nav(steps[current_idx], current_idx + 1, len(steps))
-                if res == 'EXIT':
-                    print(" Ввод отменен."); cancelled = True; break
-                elif res == 'BACK':
-                    if current_idx == 0: print(" Возврат в меню."); cancelled = True; break
-                    else: current_idx -= 1; continue
-                
-                if current_idx == 3:
-                    try: answers[current_idx] = int(res)
-                    except ValueError: print(" Ошибка: Сумма должна быть числом!"); continue
-                elif current_idx == 4:
-                    answers[current_idx] = int(res) if res in ("1", "2", "3") else None
-                else:
-                    if not res: print(" Поле не может быть пустым!"); continue
-                    answers[current_idx] = res
-                current_idx += 1
-                
-            if not cancelled:
-                new_row = (answers[0], answers[1], answers[2], answers[3], answers[4])
-                new_rows = list(config.DATA_ROWS)
-                new_rows.append(new_row)
-                session_added_rows.append(new_row)
-                
-                new_months = list(config.MONTHS_LIST)
-                if answers[2] not in new_months: new_months.append(answers[2])
-                save_config(new_rows, new_months, config.DOCUMENTS_LIST)
-                print(" Запись успешно сохранена!")
-                
+            add_new_record()
         elif choice == "3":
-            save_config(list(config.DATA_ROWS), list(config.MONTHS_LIST), list(config.DOCUMENTS_LIST))
-            success = git_deployer.run_production_pipeline(session_added_rows)
-            if success:
-                session_added_rows = []
-                
+            edit_month_sum()
         elif choice == "4":
-            print("До свидания!"); break
+            # Вызываем наш движок развертывания
+            success = git_deployer.run_production_pipeline(session_added_rows=["Обновление базы данных трекера"])
         elif choice == "5":
-            rename_sub_object()
+            print("До свидания!"); break
         else:
             print(" Неверный ввод.")
 

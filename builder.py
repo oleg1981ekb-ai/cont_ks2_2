@@ -15,7 +15,7 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
 def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     """
     Генерирует структуру табличной части напрямую из базы данных database.json.
-    Сохраняет уровни структуры (Outline) и все пастельные стили оформления.
+    Автоматически накладывает маски (трафареты) и закрашивает серым заблокированные ячейки.
     """
     # Настройка кнопок группировки СВЕРХУ над блоками
     ws.sheet_properties.outlinePr.summaryBelow = False
@@ -30,27 +30,25 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
         print(" [ОШИБКА] Файл базы данных database.json не найден!")
         return ws.max_row
 
-    # Загружаем данные из нашей иерархической базы
     with open(json_path, "r", encoding="utf-8") as f:
         db = json.load(f)
 
     # Строим таблицу на основе дерева JSON
     for direction in db.keys():
-        # Направление: Уровень структуры 0
+        # Направление: Уровень 0
         ws.append(["", str(direction), "", "", "", "", "", "", "", ""])
         current_row = ws.max_row
         apply_row_style(ws, current_row, config.FONT_DIR, config.FILL_DIR, config.THIN_BORDER, config.ALIGN_L)
         ws.row_dimensions[current_row].outline_level = 0
         
         for sub_obj in db[direction].keys():
-            # Подобъект: Уровень структуры 1
+            # Подобъект: Уровень 1
             ws.append(["", str(sub_obj), "", "", "", "", "", "", "", ""])
             current_row = ws.max_row
             apply_row_style(ws, current_row, config.FONT_OBJ, config.FILL_OBJ, config.THIN_BORDER, config.ALIGN_L)
             ws.row_dimensions[current_row].outline_level = 1
             
             for mth in config.MONTHS_LIST:
-                # Если этого месяца нет в базе для данного объекта — пропускаем
                 if mth not in db[direction][sub_obj]:
                     continue
                     
@@ -58,24 +56,45 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                 val = mth_data.get("sum", 0)
                 status_val = mth_data.get("status", "")
                 
-                # Месяц: Уровень структуры 2 (Сумма пишется только сюда)
+                # Месяц: Уровень 2
                 ws.append(["", mth, val, "", "", "", "", "", "", ""])
                 current_row = ws.max_row
                 apply_row_style(ws, current_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, config.ALIGN_L)
                 ws.row_dimensions[current_row].outline_level = 2
                 
-                # Документы: Уровень структуры 3
+                # Документы: Уровень 3
                 for d_name in config.DOCUMENTS_LIST:
-                    # Исторический статус (извлекаем сохраненное значение СтрК из базы, остальные пустые)
-                    s0 = str(status_val) if status_val else ""
-                    
-                    doc_row = ["", f"• {d_name}", "", s0, "", "", "", "", "", ""]
+                    # Базовая пустая строка документа
+                    doc_row = ["", f"• {d_name}", "", "", "", "", "", "", "", ""]
                     ws.append(doc_row)
                     current_row = ws.max_row
+                    
+                    # Применяем стандартный стиль шрифта данных и границ
                     apply_row_style(ws, current_row, config.FONT_DATA, None, config.THIN_BORDER, config.ALIGN_L)
                     ws.row_dimensions[current_row].outline_level = 3
                     
-    # Блок восстановления автоматических формул статуса в колонке J
+                    # Получаем маску-трафарет для текущего документа
+                    # Если документа нет в справочнике ролей, по умолчанию разрешаем все колонки
+                    mask = config.DOCUMENT_ROLES.get(d_name, {"СтрК": 1, "СДО": 1, "ГенДир": 1, "1 экз. З.": 1, "1 экз. П": 1, "Опл.": 1})
+                    
+                    # Сопоставляем имена колонок с индексами столбцов Excel (D=4, E=5, F=6, G=7, H=8, I=9)
+                    column_mapping = {
+                        "СтрК": 4, "СДО": 5, "ГенДир": 6, "1 экз. З.": 7, "1 экз. П": 8, "Опл.": 9
+                    }
+                    
+                    for col_name, col_idx in column_mapping.items():
+                        cell = ws.cell(row=current_row, column=col_idx)
+                        
+                        if mask.get(col_name, 1) == 0:
+                            # Трафарет закрыт (0): закрашиваем ячейку серым цветом и стираем текст
+                            cell.fill = config.FILL_BLOCKED
+                            cell.value = ""
+                        else:
+                            # Трафарет открыт (1): записываем реальный статус из базы (только для СтрК, как у вас на скринах)
+                            if col_name == "СтрК" and status_val:
+                                cell.value = str(status_val)
+                                
+    # Блок автоматических формул статуса в колонке J
     for row in range(2, ws.max_row + 1):
         cell_b = ws.cell(row=row, column=2).value
         if cell_b in config.MONTHS_LIST:
