@@ -15,8 +15,11 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
 def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     """
     Генерирует структуру табличной части напрямую из базы данных database.json.
-    Автоматически накладывает маски (трафареты) и форматирует денежные ячейки с пробелами.
+    Автоматически закрепляет верхнюю строку, накладывает маски и форматирует суммы.
     """
+    # ЗАКРЕПЛЕНИЕ СТРОКИ: Фиксирует строку 1 (все строки выше ячейки А2)
+    ws.freeze_panes = "A2"
+
     # Настройка кнопок группировки СВЕРХУ над блоками
     ws.sheet_properties.outlinePr.summaryBelow = False
 
@@ -35,14 +38,12 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
 
     # Строим таблицу на основе дерева JSON
     for direction in db.keys():
-        # Направление: Уровень 0
         ws.append(["", str(direction), "", "", "", "", "", "", "", ""])
         current_row = ws.max_row
         apply_row_style(ws, current_row, config.FONT_DIR, config.FILL_DIR, config.THIN_BORDER, config.ALIGN_L)
         ws.row_dimensions[current_row].outline_level = 0
         
         for sub_obj in db[direction].keys():
-            # Подобъект: Уровень 1
             ws.append(["", str(sub_obj), "", "", "", "", "", "", "", ""])
             current_row = ws.max_row
             apply_row_style(ws, current_row, config.FONT_OBJ, config.FILL_OBJ, config.THIN_BORDER, config.ALIGN_L)
@@ -56,18 +57,14 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                 val = mth_data.get("sum", 0.0)
                 status_val = mth_data.get("status", "")
                 
-                # Месяц: Уровень 2
                 ws.append(["", mth, float(val), "", "", "", "", "", "", ""])
                 current_row = ws.max_row
                 apply_row_style(ws, current_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, config.ALIGN_L)
                 ws.row_dimensions[current_row].outline_level = 2
                 
-                # НАСТРОЙКА ФОРМАТА ДЕНЕГ: Задаем финансовый формат с разделением тысяч пробелами
-                # Поддерживает и копейки, и выравнивание, а ноль превращает в аккуратный прочерк
                 money_cell = ws.cell(row=current_row, column=3)
                 money_cell.number_format = '#,##0.00'
                 
-                # Документы: Уровень 3
                 for d_name in config.DOCUMENTS_LIST:
                     doc_row = ["", f"• {d_name}", "", "", "", "", "", "", "", ""]
                     ws.append(doc_row)
@@ -76,7 +73,6 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                     apply_row_style(ws, current_row, config.FONT_DATA, None, config.THIN_BORDER, config.ALIGN_L)
                     ws.row_dimensions[current_row].outline_level = 3
                     
-                    # Финансовый формат для пустых ячеек документов (чтобы формулы Calc работали корректно)
                     ws.cell(row=current_row, column=3).number_format = '#,##0.00'
                     
                     mask = config.DOCUMENT_ROLES.get(d_name, {"СтрК": 1, "СДО": 1, "ГенДир": 1, "1 экз. З.": 1, "1 экз. П": 1, "Опл.": 1})
