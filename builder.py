@@ -1,4 +1,6 @@
 import openpyxl
+import json
+import os
 import config
 
 def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
@@ -10,88 +12,73 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
         if border: cell.border = border
         if alignment: cell.alignment = alignment
 
-def build_structure(ws, mock_data, saved_statuses, saved_sums):
+def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     """
-    Генерирует структуру табличной части.
-    Оставляет сумму СТРОГО на уровне месяца. В документах сумма очищена.
+    Генерирует структуру табличной части напрямую из базы данных database.json.
+    Сохраняет уровни структуры (Outline) и все пастельные стили оформления.
     """
-    # Настройка отображения кнопок группировки СВЕРХУ над блоками
+    # Настройка кнопок группировки СВЕРХУ над блоками
     ws.sheet_properties.outlinePr.summaryBelow = False
 
-    # Очищаем дефолтный лист перед заполнением, если он пустой
+    # Добавляем шапку таблицы, если лист пустой
     if ws.max_row == 1 and ws.cell(row=1, column=1).value is None:
         ws.append(config.HEADERS)
         apply_row_style(ws, 1, config.FONT_HDR, config.FILL_HDR, config.THIN_BORDER, config.ALIGN_C)
     
-    for direction in mock_data.keys():
-        # Направление: Уровень 0
+    json_path = "database.json"
+    if not os.path.exists(json_path):
+        print(" [ОШИБКА] Файл базы данных database.json не найден!")
+        return ws.max_row
+
+    # Загружаем данные из нашей иерархической базы
+    with open(json_path, "r", encoding="utf-8") as f:
+        db = json.load(f)
+
+    # Строим таблицу на основе дерева JSON
+    for direction in db.keys():
+        # Направление: Уровень структуры 0
         ws.append(["", str(direction), "", "", "", "", "", "", "", ""])
         current_row = ws.max_row
         apply_row_style(ws, current_row, config.FONT_DIR, config.FILL_DIR, config.THIN_BORDER, config.ALIGN_L)
         ws.row_dimensions[current_row].outline_level = 0
         
-        for sub_obj in mock_data[direction].keys():
-            # Подобъект: Уровень 1
+        for sub_obj in db[direction].keys():
+            # Подобъект: Уровень структуры 1
             ws.append(["", str(sub_obj), "", "", "", "", "", "", "", ""])
             current_row = ws.max_row
             apply_row_style(ws, current_row, config.FONT_OBJ, config.FILL_OBJ, config.THIN_BORDER, config.ALIGN_L)
             ws.row_dimensions[current_row].outline_level = 1
             
-            for r_key in config.MONTHS_LIST:
-                if r_key not in mock_data[direction][sub_obj]: continue
-                raw_data = mock_data[direction][sub_obj][r_key]
+            for mth in config.MONTHS_LIST:
+                # Если этого месяца нет в базе для данного объекта — пропускаем
+                if mth not in db[direction][sub_obj]:
+                    continue
+                    
+                mth_data = db[direction][sub_obj][mth]
+                val = mth_data.get("sum", 0)
+                status_val = mth_data.get("status", "")
                 
-                # Извлекаем сумму для месяца
-                if isinstance(raw_data, (list, tuple)) and len(raw_data) > 0:
-                    clean_sum = raw_data[0]
-                else:
-                    clean_sum = raw_data
-                
-                val = saved_sums.get((direction, sub_obj, r_key))
-                if val is None:
-                    val = clean_sum
-                
-                # Месяц: Уровень 2 (Сумма записывается СЮДА)
-                ws.append(["", r_key, val, "", "", "", "", "", "", ""])
+                # Месяц: Уровень структуры 2 (Сумма пишется только сюда)
+                ws.append(["", mth, val, "", "", "", "", "", "", ""])
                 current_row = ws.max_row
                 apply_row_style(ws, current_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, config.ALIGN_L)
                 ws.row_dimensions[current_row].outline_level = 2
                 
-                # Документы: Уровень 3
+                # Документы: Уровень структуры 3
                 for d_name in config.DOCUMENTS_LIST:
-                    hist_key = (direction, sub_obj, r_key, d_name)
-                    st = saved_statuses.get(hist_key, ("", "", "", "", "", ""))
+                    # Исторический статус (извлекаем сохраненное значение СтрК из базы, остальные пустые)
+                    s0 = str(status_val) if status_val else ""
                     
-                    # Распаковка исторических статусов для колонок D-I
-                    s0 = st[0] if len(st) > 0 else ""
-                    s1 = st[1] if len(st) > 1 else ""
-                    s2 = st[2] if len(st) > 2 else ""
-                    s3 = st[3] if len(st) > 3 else ""
-                    s4 = st[4] if len(st) > 4 else ""
-                    s5 = st[5] if len(st) > 5 else ""
-                    
-                    # ИСПРАВЛЕНО: Вместо clean_sum жестко передаем пустую строку ""
-                    doc_row = ["", f"• {d_name}", "", s0, s1, s2, s3, s4, s5, ""]
+                    doc_row = ["", f"• {d_name}", "", s0, "", "", "", "", "", ""]
                     ws.append(doc_row)
                     current_row = ws.max_row
                     apply_row_style(ws, current_row, config.FONT_DATA, None, config.THIN_BORDER, config.ALIGN_L)
                     ws.row_dimensions[current_row].outline_level = 3
                     
-    # Блок восстановления формул и статусов в колонке J
+    # Блок восстановления автоматических формул статуса в колонке J
     for row in range(2, ws.max_row + 1):
         cell_b = ws.cell(row=row, column=2).value
         if cell_b in config.MONTHS_LIST:
-            start_dir_body = row + 1
-            end_dir_body = row
-            for r in range(row + 1, ws.max_row + 1):
-                val_b = ws.cell(row=r, column=2).value
-                if val_b in config.MONTHS_LIST or (val_b and not str(val_b).startswith("•")):
-                    end_dir_body = r - 1
-                    break
-                if r == ws.max_row:
-                    end_dir_body = ws.max_row
-            
-            # Логика статуса проверяет ячейку суммы самого месяца (строка row)
             ws.cell(row=row, column=10).value = f"=IF(C{row}>0, \"В работе\", \"\")"
             
     return ws.max_row
