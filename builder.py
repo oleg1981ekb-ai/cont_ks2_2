@@ -15,7 +15,7 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
 def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     """
     Генерирует структуру табличной части напрямую из базы данных database.json.
-    Автоматически накладывает маски (трафареты) и закрашивает серым заблокированные ячейки.
+    Автоматически накладывает маски (трафареты) и форматирует денежные ячейки с пробелами.
     """
     # Настройка кнопок группировки СВЕРХУ над блоками
     ws.sheet_properties.outlinePr.summaryBelow = False
@@ -53,44 +53,41 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                     continue
                     
                 mth_data = db[direction][sub_obj][mth]
-                val = mth_data.get("sum", 0)
+                val = mth_data.get("sum", 0.0)
                 status_val = mth_data.get("status", "")
                 
                 # Месяц: Уровень 2
-                ws.append(["", mth, val, "", "", "", "", "", "", ""])
+                ws.append(["", mth, float(val), "", "", "", "", "", "", ""])
                 current_row = ws.max_row
                 apply_row_style(ws, current_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, config.ALIGN_L)
                 ws.row_dimensions[current_row].outline_level = 2
                 
+                # НАСТРОЙКА ФОРМАТА ДЕНЕГ: Задаем финансовый формат с разделением тысяч пробелами
+                # Поддерживает и копейки, и выравнивание, а ноль превращает в аккуратный прочерк
+                money_cell = ws.cell(row=current_row, column=3)
+                money_cell.number_format = '#,##0.00'
+                
                 # Документы: Уровень 3
                 for d_name in config.DOCUMENTS_LIST:
-                    # Базовая пустая строка документа
                     doc_row = ["", f"• {d_name}", "", "", "", "", "", "", "", ""]
                     ws.append(doc_row)
                     current_row = ws.max_row
                     
-                    # Применяем стандартный стиль шрифта данных и границ
                     apply_row_style(ws, current_row, config.FONT_DATA, None, config.THIN_BORDER, config.ALIGN_L)
                     ws.row_dimensions[current_row].outline_level = 3
                     
-                    # Получаем маску-трафарет для текущего документа
-                    # Если документа нет в справочнике ролей, по умолчанию разрешаем все колонки
-                    mask = config.DOCUMENT_ROLES.get(d_name, {"СтрК": 1, "СДО": 1, "ГенДир": 1, "1 экз. З.": 1, "1 экз. П": 1, "Опл.": 1})
+                    # Финансовый формат для пустых ячеек документов (чтобы формулы Calc работали корректно)
+                    ws.cell(row=current_row, column=3).number_format = '#,##0.00'
                     
-                    # Сопоставляем имена колонок с индексами столбцов Excel (D=4, E=5, F=6, G=7, H=8, I=9)
-                    column_mapping = {
-                        "СтрК": 4, "СДО": 5, "ГенДир": 6, "1 экз. З.": 7, "1 экз. П": 8, "Опл.": 9
-                    }
+                    mask = config.DOCUMENT_ROLES.get(d_name, {"СтрК": 1, "СДО": 1, "ГенДир": 1, "1 экз. З.": 1, "1 экз. П": 1, "Опл.": 1})
+                    column_mapping = {"СтрК": 4, "СДО": 5, "ГенДир": 6, "1 экз. З.": 7, "1 экз. П": 8, "Опл.": 9}
                     
                     for col_name, col_idx in column_mapping.items():
                         cell = ws.cell(row=current_row, column=col_idx)
-                        
                         if mask.get(col_name, 1) == 0:
-                            # Трафарет закрыт (0): закрашиваем ячейку серым цветом и стираем текст
                             cell.fill = config.FILL_BLOCKED
                             cell.value = ""
                         else:
-                            # Трафарет открыт (1): записываем реальный статус из базы (только для СтрК, как у вас на скринах)
                             if col_name == "СтрК" and status_val:
                                 cell.value = str(status_val)
                                 
