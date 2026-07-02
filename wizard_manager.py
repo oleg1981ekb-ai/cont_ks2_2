@@ -36,12 +36,16 @@ def main_menu():
                 wb.save(file_path)
                 print(f"🚀 [УСПЕХ] Отчет успешно сохранен локально: {file_path}")
                 
-                # ВОЗВРАЩАЕМ АВТОМАТИЧЕСКУЮ ВЫГРУЗКУ НА GITHUB
+                # СТАРЫЙ ВАРИАНТ ЗАПРОСА ВЕРСИИ И КОММЕНТАРИЯ
+                version = input("Введите версию: ").strip()
+                comment = input("Введите комментарий к коммиту: ").strip()
+                commit_msg = f"{version} {comment}".strip()
+                
                 print("\n📡 Синхронизация с GitHub...")
                 os.system("git add .")
-                os.system('git commit -m "Auto-update Excel tracker from Wizard"')
+                os.system(f'git commit -m "{commit_msg}"')
                 os.system("git push")
-                print("✅ [GITHUB] Изменения успешно отправлены в репозиторий!")
+                print("✅ [GITHUB] Изменения отправлены!")
                 
             except PermissionError:
                 print("❌ [ОШИБКА ДОСТУПА] Файл Excel открыт! Закройте его для генерации.")
