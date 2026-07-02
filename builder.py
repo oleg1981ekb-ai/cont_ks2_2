@@ -9,12 +9,16 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
     excel_styler.apply_row_style(ws, row_idx, font, fill, border, alignment)
 
 def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
+    # Фиксируем шапку строго на 2-й строке
     ws.freeze_panes = "A2"
     ws.sheet_properties.outlinePr.summaryBelow = False
+    
     now_str = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
     ws.oddHeader.right.text = f"Выгружено: {now_str}"
     ws.oddHeader.right.size = 9
     ws.oddHeader.right.color = "7A7A7A"
+    
+    # Записываем шапку, только если лист абсолютно пустой
     if ws.max_row == 1 and ws.cell(row=1, column=1).value is None:
         ws.append(config.HEADERS)
         excel_styler.apply_row_style(ws, 1, config.FONT_HDR, config.FILL_HDR, config.THIN_BORDER, config.ALIGN_C)
@@ -23,6 +27,7 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     if not os.path.exists(json_path): return ws.max_row
     with open(json_path, "r", encoding="utf-8") as f:
         db = json.load(f)
+        
     row_counter = 1
     for direction in db.keys():
         ws.append(["", str(direction), "", "", "", "", "", "", "", ""])
@@ -60,7 +65,6 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                     mask = config.DOCUMENT_ROLES.get(d_name, {"СтрК": 1, "СДО": 1, "ГенДир": 1, "1 экз. З.": 1, "1 экз. П": 1, "Опл.": 1})
                     column_mapping = {"СтрК": 4, "СДО": 5, "ГенДир": 6, "1 экз. З.": 7, "1 экз. П": 8, "Опл.": 9}
                     
-                    # Извлечение персонального или общего статуса
                     if isinstance(status_raw, dict) and d_name in status_raw:
                         doc_status_raw = status_raw[d_name]
                     else:
@@ -77,15 +81,33 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                             if col_name == "СтрК":
                                 excel_styler.format_status_cell(cell, doc_status_raw)
                     
-                    # НОВЫЙ 5-Й УРОВЕНЬ: Логгер даты
+                    # Логгер даты: Уровень 4
                     if mask.get("СтрК", 1) == 1 and status_date:
                         ws.append(["", f"    └─ Дата изменения СтрК: {status_date}", "", "", "", "", "", "", "", ""])
                         log_row = ws.max_row
                         excel_styler.apply_row_style(ws, log_row, excel_styler.FONT_LOG_DATE, None, config.THIN_BORDER, config.ALIGN_L)
                         ws.row_dimensions[log_row].outline_level = 4
                         
+    # Проставляем формулы статуса акта
     for row in range(2, ws.max_row + 1):
         if ws.cell(row=row, column=2).value in config.MONTHS_LIST:
             ws.cell(row=row, column=10).value = f"=IF(C{row}>0, \"В работе\", \"\")"
+            
+    # УМНЫЙ АВТОПОДБОР ШИРИНЫ КОЛОНОК (UX-улучшение)
+    for col in ws.columns:
+        max_len = 0
+        col_letter = openpyxl.utils.get_column_letter(col[0].column)
+        
+        # Находим самую длинную строку в каждой колонке
+        for cell in col:
+            if cell.value:
+                # Если в ячейке число (деньги), закладываем фиксированную ширину с запасом на разделители
+                if isinstance(cell.value, (int, float)) and cell.column == 3:
+                    max_len = max(max_len, 18)
+                else:
+                    max_len = max(max_len, len(str(cell.value)))
+                    
+        # Устанавливаем ширину с небольшим отступом (минимум 12, максимум 45 для длинных названий)
+        ws.column_dimensions[col_letter].width = max(min(max_len + 3, 45), 12)
             
     return ws.max_row

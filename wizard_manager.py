@@ -1,43 +1,57 @@
-import db_core
 import wizard_menus
-import git_deployer
+import db_viewer
+import builder
+import config
+import os
 
-def print_data():
-    db = db_core.load_db()
-    print("\n=== ТЕКУЩАЯ БАЗА ДАННЫХ ПРОЕКТА ===")
-    if not db:
-        print("База данных пуста.")
-        return
-    for direction, sub_objs in db.items():
-        print(f"\n Направление: {direction}")
-        for sub_obj, months in sub_objs.items():
-            print(f"   └─ Подобъект: {sub_obj}")
-            for mth, data in months.items():
-                print(f"        ├─ {mth}: {db_core.fmt_money(data.get('sum', 0))} руб. | Статус СтрК: {data.get('status', 'Нет')}")
-    print("====================================")
-
-def run_wizard():
+def main_menu():
     while True:
-        print("\n--- СМАРТ-ПОМОЩНИК УПРАВЛЕНИЯ ТРЕКЕРОМ (JSON БАЗА) ---")
-        print("1. Посмотреть текущую базу данных (Дерево)")
-        print("2. Добавить новую ветку структуры (Объект/Месяц)")
-        print("3. Внести изменения в таблицу")
-        print("4. Сгенерировать Excel (с запросом отправки на GitHub)")
-        print("5. Выйти из помощника")
-        choice = input("Выберите действие (1-5): ").strip()
+        print("\n>>> ГЛАВНЫЙ ПУЛЬТ УПРАВЛЕНИЯ СТРОИТЕЛЬНЫМ ТРЕКЕРОМ <<<")
+        print(" 1. Показать текущую структуру базы (Дерево)")
+        print(" 2. Добавить новую ветку структуры (Направление / Подобъект / Месяц)")
+        print(" 3. Внести изменения в таблицу (Сумма / Переименование / СтрК)")
+        print(" 4. Сгенерировать финальный отчет Excel (с отправкой на GitHub)")
+        print(" 0. Выход из программы")
+        
+        choice = input("\nВыберите действие (0-4): ").strip()
         
         if choice == "1":
-            print_data()
+            db_viewer.print_data()
         elif choice == "2":
             wizard_menus.menu_add_record()
         elif choice == "3":
             wizard_menus.menu_edit_data()
         elif choice == "4":
-            git_deployer.run_production_pipeline(session_added_rows=["Обновление базы данных трекера"])
-        elif choice == "5":
-            print("До свидания!"); break
+            print("\n⚙ Запущена генерация Excel...")
+            import openpyxl
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Реестр Актов"
+            
+            ws.sheet_view.showGridLines = True
+            builder.build_structure(ws)
+            
+            file_path = config.FULL_PATH if config.FULL_PATH else "Трекер_Акт_Выполнения.xlsx"
+            try:
+                wb.save(file_path)
+                print(f"🚀 [УСПЕХ] Отчет успешно сохранен локально: {file_path}")
+                
+                # ВОЗВРАЩАЕМ АВТОМАТИЧЕСКУЮ ВЫГРУЗКУ НА GITHUB
+                print("\n📡 Синхронизация с GitHub...")
+                os.system("git add .")
+                os.system('git commit -m "Auto-update Excel tracker from Wizard"')
+                os.system("git push")
+                print("✅ [GITHUB] Изменения успешно отправлены в репозиторий!")
+                
+            except PermissionError:
+                print("❌ [ОШИБКА ДОСТУПА] Файл Excel открыт! Закройте его для генерации.")
+            except Exception as e:
+                print(f"❌ [ОШИБКА] Не удалось сохранить файл или отправить в Git: {e}")
+        elif choice == "0":
+            print("\nПрограмма успешно завершена. Всего доброго!")
+            break
         else:
-            print(" Неверный ввод.")
+            print(" [ОШИБКА] Неверный выбор.")
 
 if __name__ == "__main__":
-    run_wizard()
+    main_menu()
