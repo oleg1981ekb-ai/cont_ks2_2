@@ -36,8 +36,11 @@ def main_menu():
                 wb.save(file_path)
                 print(f"🚀 [УСПЕХ] Отчет успешно сохранен локально: {file_path}")
                 
-                # СТАРЫЙ ВАРИАНТ ЗАПРОСА ВЕРСИИ И КОММЕНТАРИЯ
-                version = input("Введите версию: ").strip()
+                # ПОЛНОЕ ВОССТАНОВЛЕНИЕ ЛОГИКИ ВЕРСИИ ПО УМОЛЧАНИЮ
+                default_ver = getattr(config, "VERSION", "v1.0.0")
+                version_input = input(f"Введите версию [По умолчанию: {default_ver}]: ").strip()
+                version = version_input if version_input else default_ver
+                
                 comment = input("Введите комментарий к коммиту: ").strip()
                 commit_msg = f"{version} {comment}".strip()
                 
