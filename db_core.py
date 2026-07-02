@@ -1,5 +1,6 @@
 import os
 import json
+import datetime
 import config
 
 ALL_YEAR_MONTHS = [
@@ -8,17 +9,21 @@ ALL_YEAR_MONTHS = [
 ]
 
 def fmt_money(value):
-    """Форматирует число с пробелами и русской запятой для копеек (русский стандарт)."""
+    """Форматирует число с пробелами и русской запятой для копеек."""
     try:
         val_float = float(value)
         if val_float.is_integer():
             return f"{int(val_float):_}".replace("_", " ")
         else:
             parts = f"{val_float:.2f}".split(".")
-            thousand_part = f"{int(parts[0]):_}".replace("_", " ")
-            return f"{thousand_part},{parts[1]}"
+            thousand_part = f"{int(parts):_}".replace("_", " ")
+            return f"{thousand_part},{parts}"
     except:
         return str(value)
+
+def get_short_date():
+    """Возвращает текущую дату в формате ДД.ММ"""
+    return datetime.datetime.now().strftime("%d.%m")
 
 def load_db():
     json_path = "database.json"
