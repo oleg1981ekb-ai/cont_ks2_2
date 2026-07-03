@@ -77,7 +77,6 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
 
                     status_date = doc_status_raw.get("date", "") if isinstance(doc_status_raw, dict) else ""
                     
-                    # ИЗВЛЕЧЕНИЕ ЧИСТОЙ ЦИФРЫ СТАТУСА ДЛЯ КОРРЕКТНОЙ ПОКРАСКИ
                     if isinstance(doc_status_raw, dict):
                         clean_status_value = doc_status_raw.get("value", "")
                     else:
@@ -90,7 +89,6 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                             cell.value = ""
                         else:
                             if col_name == "СтрК":
-                                # Передаем отфильтрованное числовое значение
                                 excel_styler.format_status_cell(cell, clean_status_value)
                     
                     # Логгер даты: Уровень 4
@@ -106,7 +104,13 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
         if cell_val and not str(cell_val).startswith("•") and not str(cell_val).startswith(" "):
             ws.cell(row=row, column=10).value = f"=IF(C{row}>0, \"В работе\", \"\")"
             
-    # Автоподбор ширины колонок
+    # УМНОЕ АВТОМАТИЧЕСКОЕ СВЕРТЫВАНИЕ СТРОК ДО УРОВНЯ МЕСЯЦЕВ
+    ws.sheet_view.showOutlineSymbols = True
+    for row_idx in range(2, ws.max_row + 1):
+        if ws.row_dimensions[row_idx].outline_level in (3, 4):
+            ws.row_dimensions[row_idx].hidden = True
+            
+    # ИСПРАВЛЕНО: Безопасный автоподбор ширины через чтение первой ячейки кортежа col[0]
     for col in ws.columns:
         max_len = 0
         col_idx = col[0].column
