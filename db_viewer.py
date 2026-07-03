@@ -17,10 +17,16 @@ def print_data():
         for sub_obj in db[direction].keys():
             print(f"   └─ 🏢 Подобъект: {sub_obj}")
             
-            for mth in config.MONTHS_LIST:
-                if mth not in db[direction][sub_obj]:
-                    continue
+            raw_months = list(db[direction][sub_obj].keys())
+            available_months = [m for m in db_core.ALL_YEAR_MONTHS if m in raw_months]
+            
+            for m in raw_months:
+                if m not in available_months:
+                    available_months.append(m)
+            
+            for mth in available_months:
                 mth_data = db[direction][sub_obj][mth]
+                # ИСПРАВЛЕНО: Строгое форматирование разрядов пробелами для дерева консоли
                 fmt_sum = db_core.fmt_money(mth_data.get("sum", 0))
                 status_raw = mth_data.get("status", "")
 

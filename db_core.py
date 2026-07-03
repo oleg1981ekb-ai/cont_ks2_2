@@ -9,15 +9,14 @@ ALL_YEAR_MONTHS = [
 ]
 
 def fmt_money(value):
-    """Форматирует число с пробелами и русской запятой для копеек."""
+    """Форматирует число с разделением разрядов пробелами."""
     try:
+        if value is None or value == "":
+            return "0"
         val_float = float(value)
         if val_float.is_integer():
-            return f"{int(val_float):_}".replace("_", " ")
-        else:
-            parts = f"{val_float:.2f}".split(".")
-            thousand_part = f"{int(parts):_}".replace("_", " ")
-            return f"{thousand_part},{parts}"
+            return f"{int(val_float):,}".replace(",", " ")
+        return f"{val_float:,.2f}".replace(",", " ")
     except:
         return str(value)
 

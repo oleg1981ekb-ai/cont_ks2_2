@@ -19,7 +19,9 @@ def menu_edit_data(select_target_func):
     for idx, m in enumerate(months_in_db, 1):
         st_raw = db[target_dir][target_sub][m].get("status", "")
         st_val = "Раздельный по док." if isinstance(st_raw, dict) and "value" not in st_raw else (st_raw.get("value", "Нет") if isinstance(st_raw, dict) else (st_raw if st_raw else "Нет"))
-        print(f" {idx}. {m} (Сумма: {db_core.fmt_money(db[target_dir][target_sub][m].get('sum', 0))} руб. | СтрК: {st_val})")
+        # ИСПРАВЛЕНО: Добавлено красивое форматирование разрядов пробелами при выводе списка
+        fmt_sum = db_core.fmt_money(db[target_dir][target_sub][m].get('sum', 0))
+        print(f" {idx}. {m} (Сумма: {fmt_sum} руб. | СтрК: {st_val})")
     
     m_choice = input("\nВыберите номер периода: ").strip()
     if not m_choice or not m_choice.isdigit(): return
@@ -41,9 +43,8 @@ def menu_edit_data(select_target_func):
                 db[target_dir][target_sub][target_mth]["sum"] = cleaned_sum
                 db_core.save_db(db)
                 
-                # СИГНАЛ: В сессии изменен бюджет
                 wizard_git.register_action("sum_changed")
-                
+                # ИСПРАВЛЕНО: Форматирование разрядов при выводе сообщения об успехе
                 print(f"  [УСПЕХ] Бюджет успешно обновлен на: {db_core.fmt_money(cleaned_sum)} руб.")
                 break
             except ValueError:
@@ -62,14 +63,10 @@ def menu_edit_data(select_target_func):
                 old = db[target_dir][target_sub].pop(target_mth)
                 db[target_dir][target_sub][new_mth_name]["sum"] += float(old.get("sum", 0))
                 db_core.save_db(db)
-                
-                # Переименование с объединением также считается изменением сумм
                 wizard_git.register_action("sum_changed")
                 return
         db[target_dir][target_sub][new_mth_name] = db[target_dir][target_sub].pop(target_mth)
         db_core.save_db(db)
-        
-        # Сигнализируем, что структура расширена/изменена
         wizard_git.register_action("branch_added")
         db_core.update_config_months(new_mth_name)
 
@@ -91,10 +88,7 @@ def menu_edit_data(select_target_func):
         if apply_mode == "1":
             db[target_dir][target_sub][target_mth]["status"] = {"value": status_value, "date": status_date}
             db_core.save_db(db)
-            
-            # СИГНАЛ: В сессии изменен статус документов
             wizard_git.register_action("status_changed")
-            
             print(f" [УСПЕХ] Статус успешно присвоен ВСЕМ документам периода!")
         elif apply_mode == "2":
             allowed_docs = []
@@ -128,8 +122,5 @@ def menu_edit_data(select_target_func):
 
             db[target_dir][target_sub][target_mth]["status"][target_doc] = {"value": status_value, "date": status_date}
             db_core.save_db(db)
-            
-            # СИГНАЛ: В сессии изменен статус точечного документа
             wizard_git.register_action("status_changed")
-            
             print(f" [УСПЕХ] Статус документа '{target_doc}' успешно обновлен!")
