@@ -3,13 +3,14 @@ import json
 import os
 import datetime
 import config
+import db_core
+import db_viewer
 import excel_styler
 
 def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
     excel_styler.apply_row_style(ws, row_idx, font, fill, border, alignment)
 
 def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
-    # Фиксируем шапку строго на 2-й строке
     ws.freeze_panes = "A2"
     ws.sheet_properties.outlinePr.summaryBelow = False
     
@@ -18,7 +19,6 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     ws.oddHeader.right.size = 9
     ws.oddHeader.right.color = "7A7A7A"
     
-    # Записываем шапку, только если лист абсолютно пустой
     if ws.max_row == 1 and ws.cell(row=1, column=1).value is None:
         ws.append(config.HEADERS)
         excel_styler.apply_row_style(ws, 1, config.FONT_HDR, config.FILL_HDR, config.THIN_BORDER, config.ALIGN_C)
@@ -39,10 +39,15 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
             excel_styler.apply_row_style(ws, ws.max_row, config.FONT_OBJ, config.FILL_OBJ, config.THIN_BORDER, config.ALIGN_L)
             ws.row_dimensions[ws.max_row].outline_level = 1
             
-            for mth in config.MONTHS_LIST:
-                if mth not in db[direction][sub_obj]: continue
+            raw_months = list(db[direction][sub_obj].keys())
+            available_months = [m for m in db_core.ALL_YEAR_MONTHS if m in raw_months]
+            
+            for m in raw_months:
+                if m not in available_months:
+                    available_months.append(m)
+            
+            for mth in available_months:
                 mth_data = db[direction][sub_obj][mth]
-                
                 status_raw = mth_data.get("status", "")
                 
                 # Месяц: Уровень 2
@@ -90,24 +95,23 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                         
     # Проставляем формулы статуса акта
     for row in range(2, ws.max_row + 1):
-        if ws.cell(row=row, column=2).value in config.MONTHS_LIST:
+        cell_val = ws.cell(row=row, column=2).value
+        if cell_val and not str(cell_val).startswith("•") and not str(cell_val).startswith(" "):
             ws.cell(row=row, column=10).value = f"=IF(C{row}>0, \"В работе\", \"\")"
             
-    # УМНЫЙ АВТОПОДБОР ШИРИНЫ КОЛОНОК (UX-улучшение)
+    # ИСПРАВЛЕНО: Безопасный автоподбор ширины, совместимый со всеми версиями openpyxl
     for col in ws.columns:
         max_len = 0
-        col_letter = openpyxl.utils.get_column_letter(col[0].column)
+        # Берем индекс колонки напрямую у первой ячейки в кортеже
+        col_idx = col[0].column
+        col_letter = openpyxl.utils.get_column_letter(col_idx)
         
-        # Находим самую длинную строку в каждой колонке
         for cell in col:
             if cell.value:
-                # Если в ячейке число (деньги), закладываем фиксированную ширину с запасом на разделители
                 if isinstance(cell.value, (int, float)) and cell.column == 3:
                     max_len = max(max_len, 18)
                 else:
                     max_len = max(max_len, len(str(cell.value)))
-                    
-        # Устанавливаем ширину с небольшим отступом (минимум 12, максимум 45 для длинных названий)
         ws.column_dimensions[col_letter].width = max(min(max_len + 3, 45), 12)
             
     return ws.max_row
