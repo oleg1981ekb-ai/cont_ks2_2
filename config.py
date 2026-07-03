@@ -57,4 +57,9 @@ DOCUMENT_ROLES = {
 # Пастельно-серый цвет для блокировки неиспользуемых ячеек
 FILL_BLOCKED = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
 
-VERSION = "v1.0.1"
+VERSION = "v1.1.3"
+
+# Дополнительные цвета для автоматической покраски статусов СтрК
+FILL_GREEN = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
+FILL_YELLOW = PatternFill(start_color='FFEB9C', end_color='FFEB9C', fill_type='solid')
+FILL_RED = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')

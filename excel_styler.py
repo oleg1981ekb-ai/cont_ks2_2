@@ -14,23 +14,34 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
         if alignment: cell.alignment = alignment
 
 def format_status_cell(cell, status_raw):
-    """Записывает в ячейку чистое число статуса для корректной работы условного цвета."""
-    status_val = ""
-    
+    """Записывает статус, красит ячейку и делает цифры жирными чёрными."""
+    import config
+    from openpyxl.styles import Font
+
     if isinstance(status_raw, dict):
         status_val = status_raw.get("value", "")
     else:
         status_val = status_raw
 
     if status_val == "" or status_val is None:
-        return ""
+        return
 
+    status_str = str(status_val).strip()
+    
     try:
-        # ВОЗВРАЩАЕМ ИСПРАВЛЕНИЕ: Преобразуем статус в число int, чтобы сработал цвет Excel
-        cell.value = int(status_val)
+        cell.value = int(status_str)
     except ValueError:
-        cell.value = str(status_val)
+        cell.value = status_str
 
-    cell.font = config.FONT_DATA
     cell.alignment = config.ALIGN_C
-    return cell.value
+    
+    # ИСПРАВЛЕНО: Принудительный жирный черный шрифт для идеального контраста
+    cell.font = Font(name="Calibri", size=11, bold=True, color="000000")
+    
+    if status_str == "1":
+        cell.fill = config.FILL_GREEN
+    elif status_str == "2":
+        cell.fill = config.FILL_YELLOW
+    elif status_str == "3":
+        cell.fill = config.FILL_RED
+

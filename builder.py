@@ -77,6 +77,12 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
 
                     status_date = doc_status_raw.get("date", "") if isinstance(doc_status_raw, dict) else ""
                     
+                    # ИЗВЛЕЧЕНИЕ ЧИСТОЙ ЦИФРЫ СТАТУСА ДЛЯ КОРРЕКТНОЙ ПОКРАСКИ
+                    if isinstance(doc_status_raw, dict):
+                        clean_status_value = doc_status_raw.get("value", "")
+                    else:
+                        clean_status_value = doc_status_raw
+
                     for col_name, col_idx in column_mapping.items():
                         cell = ws.cell(row=doc_row, column=col_idx)
                         if mask.get(col_name, 1) == 0:
@@ -84,7 +90,8 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                             cell.value = ""
                         else:
                             if col_name == "СтрК":
-                                excel_styler.format_status_cell(cell, doc_status_raw)
+                                # Передаем отфильтрованное числовое значение
+                                excel_styler.format_status_cell(cell, clean_status_value)
                     
                     # Логгер даты: Уровень 4
                     if mask.get("СтрК", 1) == 1 and status_date:
@@ -99,13 +106,11 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
         if cell_val and not str(cell_val).startswith("•") and not str(cell_val).startswith(" "):
             ws.cell(row=row, column=10).value = f"=IF(C{row}>0, \"В работе\", \"\")"
             
-    # ИСПРАВЛЕНО: Безопасный автоподбор ширины, совместимый со всеми версиями openpyxl
+    # Автоподбор ширины колонок
     for col in ws.columns:
         max_len = 0
-        # Берем индекс колонки напрямую у первой ячейки в кортеже
         col_idx = col[0].column
         col_letter = openpyxl.utils.get_column_letter(col_idx)
-        
         for cell in col:
             if cell.value:
                 if isinstance(cell.value, (int, float)) and cell.column == 3:
