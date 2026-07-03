@@ -1,4 +1,5 @@
 import wizard_menus
+import wizard_edits
 import db_viewer
 import builder
 import config
@@ -20,7 +21,8 @@ def main_menu():
         elif choice == "2":
             wizard_menus.menu_add_record()
         elif choice == "3":
-            wizard_menus.menu_edit_data()
+            # Передаем функцию выбора целей внутрь изолированного модуля редактирования
+            wizard_edits.menu_edit_data(wizard_menus.select_hierarchy_target)
         elif choice == "4":
             print("\n⚙ Запущена генерация Excel...")
             import openpyxl
@@ -36,7 +38,6 @@ def main_menu():
                 wb.save(file_path)
                 print(f"🚀 [УСПЕХ] Отчет успешно сохранен локально: {file_path}")
                 
-                # ПОЛНОЕ ВОССТАНОВЛЕНИЕ ЛОГИКИ ВЕРСИИ ПО УМОЛЧАНИЮ
                 default_ver = getattr(config, "VERSION", "v1.0.0")
                 version_input = input(f"Введите версию [По умолчанию: {default_ver}]: ").strip()
                 version = version_input if version_input else default_ver

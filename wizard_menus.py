@@ -9,7 +9,7 @@ def select_hierarchy_target(db, allow_new=False):
     if directions:
         print("\nДоступные Направления:")
         for idx, d in enumerate(directions, 1): print(f" {idx}. {d}")
-        if allow_new: print(f" {len(directions) + 1}. [Создать абсолютно НОВОЕ Направление руками]")
+        if allow_new: print(f" {len(directions) + 1}. [Создать НОВОЕ Направление]")
         
         limit = len(directions) + 1 if allow_new else len(directions)
         d_choice = input(f"\nВыберите номер Направления (1-{limit}): ").strip()
@@ -19,18 +19,19 @@ def select_hierarchy_target(db, allow_new=False):
         if 0 <= d_idx < len(directions): target_dir = directions[d_idx]
         elif allow_new and d_idx == len(directions):
             target_dir = input("Введите название НОВОГО Направления: ").strip()
-        else:
-            target_dir = input("База пуста. Введите название Направления: ").strip()
+        else: return None, None
     else:
-        target_dir = input("База пуста. Введите название Направления: ").strip()
+        if allow_new: target_dir = input("База пуста. Введите название Направления: ").strip()
+        else: return None, None
 
     if not target_dir: return None, None
     target_sub = ""
+    
     if target_dir in db and db[target_dir]:
         sub_objs = list(db[target_dir].keys())
         print(f"\nДоступные Подобъекты для '{target_dir}':")
         for idx, s in enumerate(sub_objs, 1): print(f" {idx}. {s}")
-        if allow_new: print(f" {len(sub_objs) + 1}. [Создать абсолютно НОВОЙ Подобъект руками]")
+        if allow_new: print(f" {len(sub_objs) + 1}. [Создать НОВОЙ Подобъект]")
         
         limit = len(sub_objs) + 1 if allow_new else len(sub_objs)
         s_choice = input(f"Выберите номер Подобъекта (1-{limit}): ").strip()
@@ -40,137 +41,59 @@ def select_hierarchy_target(db, allow_new=False):
         if 0 <= s_idx < len(sub_objs): target_sub = sub_objs[s_idx]
         elif allow_new and s_idx == len(sub_objs):
             target_sub = input("Введите название НОВОГО Подобъекта: ").strip()
-        else:
-            target_sub = input("Введите название Подобъекта: ").strip()
+        else: return None, None
     else:
-        target_sub = input("Введите название Подобъекта: ").strip()
+        if allow_new: target_sub = input("Введите название Подобъекта: ").strip()
+        else: return None, None
     
     return target_dir, target_sub
 
 def menu_add_record():
-    """Логика добавления новой ветки (Пункт 2)."""
     print("\n>> ДОБАВЛЕНИЕ НОВОЙ ВЕТКИ СТРУКТУРЫ")
     db = db_core.load_db()
     
     target_dir, target_sub = select_hierarchy_target(db, allow_new=True)
     if not target_dir or not target_sub: return
-    print("\nВыберите Месяц из календаря:")
-    active_months = list(db[target_dir][target_sub].keys()) if (target_dir in db and target_sub in db[target_dir]) else []
-    for i, m_name in enumerate(db_core.ALL_YEAR_MONTHS, 1):
-        marker = " [УЖЕ ЕСТЬ]" if m_name in active_months else ""
-        print(f" {i}. {m_name}{marker}")
     
-    mth_choice = input("\nВведите номер месяца (1-12): ").strip()
-    if not mth_choice or not mth_choice.isdigit(): return
-    mth_idx = int(mth_choice) - 1
-    if mth_idx < 0 or mth_idx >= 12: return
-    month = db_core.ALL_YEAR_MONTHS[mth_idx]
+    while True:
+        print("\nВыберите Месяц из календаря:")
+        
+        active_months = []
+        if target_dir in db and target_sub in db[target_dir]:
+            if isinstance(db[target_dir][target_sub], dict):
+                active_months = list(db[target_dir][target_sub].keys())
+            
+        for i, m_name in enumerate(db_core.ALL_YEAR_MONTHS, 1):
+            marker = " [УЖЕ ЕСТЬ]" if m_name in active_months else ""
+            print(f" {i}. {m_name}{marker}")
+        
+        mth_choice = input("\nВведите номер месяца (1-12) или '0' для отмены: ").strip()
+        if mth_choice == "0":
+            return
+            
+        if not mth_choice or not mth_choice.isdigit():
+            print(" ❌ [ОШИБКА] Введите число от 1 до 12!")
+            continue
+            
+        mth_idx = int(mth_choice) - 1
+        if mth_idx < 0 or mth_idx >= 12:
+            print(" ❌ [ОШИБКА] Номер должен быть от 1 до 12!")
+            continue
+            
+        month = db_core.ALL_YEAR_MONTHS[mth_idx]
+        
+        if target_dir in db and target_sub in db[target_dir] and month in db[target_dir][target_sub]:
+            print(f"\n ⚠ [ВНИМАНИЕ] Период '{month}' УЖЕ существует у этого объекта!")
+            print(" Используйте Главное меню -> Пункт 3 для изменения его данных.")
+            input("\nНажмите Enter...")
+            return
+            
+        break
     
     if target_dir not in db: db[target_dir] = {}
     if target_sub not in db[target_dir]: db[target_dir][target_sub] = {}
-    if month in db[target_dir][target_sub]: return
     
     db[target_dir][target_sub][month] = {"sum": 0.0, "status": {"value": "", "date": ""}}
     db_core.save_db(db)
     db_core.update_config_months(month)
-    print(f" [УСПЕХ] Период '{month}' успешно добавлен!")
-
-def menu_edit_data():
-    """Логика изменения бюджетов, месяцев и статусов (Пункт 3)."""
-    print("\n>> ВНЕСЕНИЕ ИЗМЕНЕНИЙ В ТАБЛИЦУ")
-    db = db_core.load_db()
-    if not db: return
-    print("Выберите тип изменений:\n 1. Изменить сумму месяца\n 2. Переименовать месяц\n 3. Изменить статус СтрК")
-    sub_choice = input("Выберите действие (1-3): ").strip()
-    if sub_choice not in ("1", "2", "3"): return
-    target_dir, target_sub = select_hierarchy_target(db, allow_new=False)
-    if not target_dir or not target_sub: return
-    months_in_db = list(db[target_dir][target_sub].keys())
-    print(f"\nТекущие активные периоды:")
-    for idx, m in enumerate(months_in_db, 1):
-        st_raw = db[target_dir][target_sub][m].get("status", "")
-        st_val = "Смешанный/По док." if isinstance(st_raw, dict) and "value" not in st_raw else (st_raw.get("value", "Нет") if isinstance(st_raw, dict) else (st_raw if st_raw else "Нет"))
-        print(f" {idx}. {m} (Сумма: {db_core.fmt_money(db[target_dir][target_sub][m].get('sum', 0))} руб. | СтрК: {st_val})")
-    
-    m_choice = input("\nВыберите номер периода: ").strip()
-    if not m_choice or not m_choice.isdigit(): return
-    m_idx = int(m_choice) - 1
-    if m_idx < 0 or m_idx >= len(months_in_db): return
-    target_mth = months_in_db[m_idx]
-
-    if sub_choice == "1":
-        new_sum_str = input(f"\nВведите новую сумму: ").strip()
-        try:
-            db[target_dir][target_sub][target_mth]["sum"] = float(new_sum_str.replace(",", "."))
-            db_core.save_db(db)
-            print(" [УСПЕХ] Бюджет обновлен.")
-        except: print(" [ОШИБКА] Неверное число.")
-    elif sub_choice == "2":
-        print("\nВыберите НОВОЕ название месяца:")
-        for i, m_name in enumerate(db_core.ALL_YEAR_MONTHS, 1): print(f" {i}. {m_name}")
-        new_mth_choice = input("\nВведите номер (1-12): ").strip()
-        if not new_mth_choice or not new_mth_choice.isdigit(): return
-        new_mth_name = db_core.ALL_YEAR_MONTHS[int(new_mth_choice) - 1]
-        
-        if new_mth_name in db[target_dir][target_sub]:
-            print(" ⚠ Месяц уже существует! Объединяем? (1-Да / 2-Нет)")
-            if input().strip() == "1":
-                old = db[target_dir][target_sub].pop(target_mth)
-                db[target_dir][target_sub][new_mth_name]["sum"] += float(old.get("sum", 0))
-                db_core.save_db(db)
-                return
-        db[target_dir][target_sub][new_mth_name] = db[target_dir][target_sub].pop(target_mth)
-        db_core.save_db(db)
-        db_core.update_config_months(new_mth_name)
-    elif sub_choice == "3":
-        print("\nВыберите статус СтрК:\n 1. Зеленый | 2. Желтый | 3. Красный | 0. Очистить")
-        st_choice = input("Введите номер (0-3): ").strip()
-        if st_choice not in ("1", "2", "3", "0"):
-            print(" [ОШИБКА] Неверный статус.")
-            return
-
-        status_value = "" if st_choice == "0" else int(st_choice)
-        status_date = "" if st_choice == "0" else db_core.get_short_date()
-
-        print("\nКак применить статус к документам этого месяца?")
-        print(" 1. Заполнить ВСЕ документы сразу")
-        print(" 2. Выбрать КОНКРЕТНЫЙ документ из списка")
-        apply_mode = input("Выберите вариант (1-2): ").strip()
-
-        if apply_mode == "1":
-            db[target_dir][target_sub][target_mth]["status"] = {"value": status_value, "date": status_date}
-            db_core.save_db(db)
-            print(f" [УСПЕХ] Статус успешно присвоен ВСЕМ документам периода!")
-        elif apply_mode == "2":
-            allowed_docs = []
-            for doc_name in config.DOCUMENTS_LIST:
-                mask = config.DOCUMENT_ROLES.get(doc_name, {})
-                if mask.get("СтрК", 1) == 1:
-                    allowed_docs.append(doc_name)
-
-            if not allowed_docs:
-                print(" ⚠ [ВНИМАНИЕ] Согласно config.py, для этого периода нет доступных документов для СтрК!")
-                return
-
-            print(f"\nДоступные документы для изменения СтрК:")
-            for idx, doc_name in enumerate(allowed_docs, 1):
-                print(f" {idx}. {doc_name}")
-            
-            doc_choice = input(f"Выберите номер документа (1-{len(allowed_docs)}): ").strip()
-            if not doc_choice or not doc_choice.isdigit(): return
-            doc_idx = int(doc_choice) - 1
-            if doc_idx < 0 or doc_idx >= len(allowed_docs): return
-            target_doc = allowed_docs[doc_idx]
-
-            current_status = db[target_dir][target_sub][target_mth].get("status", {})
-            if not isinstance(current_status, dict) or "value" in current_status:
-                db[target_dir][target_sub][target_mth]["status"] = {}
-                for d_name in config.DOCUMENTS_LIST:
-                    db[target_dir][target_sub][target_mth]["status"][d_name] = {
-                        "value": current_status.get("value", "") if isinstance(current_status, dict) else "",
-                        "date": current_status.get("date", "") if isinstance(current_status, dict) else ""
-                    }
-
-            db[target_dir][target_sub][target_mth]["status"][target_doc] = {"value": status_value, "date": status_date}
-            db_core.save_db(db)
-            print(f" [УСПЕХ] Статус документа '{target_doc}' успешно обновлен!")
+    print(f" [УСПЕХ] Период '{month}' успешно добавлен в базу!")
