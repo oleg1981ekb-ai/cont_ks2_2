@@ -56,3 +56,5 @@ DOCUMENT_ROLES = {
 
 # Пастельно-серый цвет для блокировки неиспользуемых ячеек
 FILL_BLOCKED = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+VERSION = "v1.0.1"

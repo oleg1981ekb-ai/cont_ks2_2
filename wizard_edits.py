@@ -1,5 +1,6 @@
 import db_core
 import config
+import wizard_git
 
 def menu_edit_data(select_target_func):
     """Логика изменения бюджетов, месяцев и статусов (Пункт 3)."""
@@ -39,6 +40,10 @@ def menu_edit_data(select_target_func):
                 
                 db[target_dir][target_sub][target_mth]["sum"] = cleaned_sum
                 db_core.save_db(db)
+                
+                # СИГНАЛ: В сессии изменен бюджет
+                wizard_git.register_action("sum_changed")
+                
                 print(f"  [УСПЕХ] Бюджет успешно обновлен на: {db_core.fmt_money(cleaned_sum)} руб.")
                 break
             except ValueError:
@@ -57,9 +62,15 @@ def menu_edit_data(select_target_func):
                 old = db[target_dir][target_sub].pop(target_mth)
                 db[target_dir][target_sub][new_mth_name]["sum"] += float(old.get("sum", 0))
                 db_core.save_db(db)
+                
+                # Переименование с объединением также считается изменением сумм
+                wizard_git.register_action("sum_changed")
                 return
         db[target_dir][target_sub][new_mth_name] = db[target_dir][target_sub].pop(target_mth)
         db_core.save_db(db)
+        
+        # Сигнализируем, что структура расширена/изменена
+        wizard_git.register_action("branch_added")
         db_core.update_config_months(new_mth_name)
 
     elif sub_choice == "3":
@@ -80,6 +91,10 @@ def menu_edit_data(select_target_func):
         if apply_mode == "1":
             db[target_dir][target_sub][target_mth]["status"] = {"value": status_value, "date": status_date}
             db_core.save_db(db)
+            
+            # СИГНАЛ: В сессии изменен статус документов
+            wizard_git.register_action("status_changed")
+            
             print(f" [УСПЕХ] Статус успешно присвоен ВСЕМ документам периода!")
         elif apply_mode == "2":
             allowed_docs = []
@@ -113,4 +128,8 @@ def menu_edit_data(select_target_func):
 
             db[target_dir][target_sub][target_mth]["status"][target_doc] = {"value": status_value, "date": status_date}
             db_core.save_db(db)
+            
+            # СИГНАЛ: В сессии изменен статус точечного документа
+            wizard_git.register_action("status_changed")
+            
             print(f" [УСПЕХ] Статус документа '{target_doc}' успешно обновлен!")

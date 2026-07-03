@@ -3,6 +3,7 @@ import wizard_edits
 import db_viewer
 import builder
 import config
+import wizard_git
 import os
 
 def main_menu():
@@ -20,8 +21,8 @@ def main_menu():
             db_viewer.print_data()
         elif choice == "2":
             wizard_menus.menu_add_record()
+            wizard_git.register_action("branch_added")
         elif choice == "3":
-            # Передаем функцию выбора целей внутрь изолированного модуля редактирования
             wizard_edits.menu_edit_data(wizard_menus.select_hierarchy_target)
         elif choice == "4":
             print("\n⚙ Запущена генерация Excel...")
@@ -37,24 +38,12 @@ def main_menu():
             try:
                 wb.save(file_path)
                 print(f"🚀 [УСПЕХ] Отчет успешно сохранен локально: {file_path}")
-                
-                default_ver = getattr(config, "VERSION", "v1.0.0")
-                version_input = input(f"Введите версию [По умолчанию: {default_ver}]: ").strip()
-                version = version_input if version_input else default_ver
-                
-                comment = input("Введите комментарий к коммиту: ").strip()
-                commit_msg = f"{version} {comment}".strip()
-                
-                print("\n📡 Синхронизация с GitHub...")
-                os.system("git add .")
-                os.system(f'git commit -m "{commit_msg}"')
-                os.system("git push")
-                print("✅ [GITHUB] Изменения отправлены!")
+                wizard_git.run_git_sync()
                 
             except PermissionError:
                 print("❌ [ОШИБКА ДОСТУПА] Файл Excel открыт! Закройте его для генерации.")
             except Exception as e:
-                print(f"❌ [ОШИБКА] Не удалось сохранить файл или отправить в Git: {e}")
+                print(f"❌ [ОШИБКА] Ошибка при сохранении отчета: {e}")
         elif choice == "0":
             print("\nПрограмма успешно завершена. Всего доброго!")
             break
