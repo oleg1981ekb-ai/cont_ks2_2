@@ -80,7 +80,10 @@ COLUMN_MAPPING = {
     "СтрК": "D",
     "СДО": "E",
     "ГенДир": "F",
+    "1 экз. З.": "G",
+    "1 экз. П": "H",
 }
+
 
 # === МАСКИ РОЛЕЙ СТАТУСОВ ===
 # Маска для СтрК уже описана в таблице ROLE_KS2/ROLE_KS3/ROLE_INVOICE/ROLE_EXEC_DOC.
@@ -94,10 +97,21 @@ ROLE_GEN_DIR = {
 }
 
 # Общий реестр масок по типу статуса
+ROLE_CUSTOMER = {
+    "Акт КС-2": 1,
+    "Справка КС-3": 1,
+    "Счет-фактура": 1,
+    "Счет": 1,
+    "Исполнительная документация": 1,
+}
+
 ROLES = {
     "СДО": ROLE_KS2,  # СДО уже управляется базовыми масками в ROLE_KS2/ROLE_KS3 и документ-ролями
     "ГенДир": ROLE_GEN_DIR,
+    "1 экз. З.": ROLE_CUSTOMER,
+    "1 экз. П": ROLE_CUSTOMER,
 }
+
 
 VERSION = "v1.3.1"
 
@@ -120,4 +134,19 @@ SDO_STATUS_COLORS = {
     "yellow": FILL_SDO_YELLOW,
     "red": FILL_SDO_RED,
 }
+
+# Цвета для статусов 1 экз. З.
+Z1_STATUS_COLORS = {
+    "green": FILL_GREEN,
+    "yellow": FILL_YELLOW,
+    "red": FILL_RED,
+}
+
+# Цвета для статусов 1 экз. П
+P1_STATUS_COLORS = {
+    "green": FILL_GREEN,
+    "yellow": FILL_YELLOW,
+    "red": FILL_RED,
+}
+
 
