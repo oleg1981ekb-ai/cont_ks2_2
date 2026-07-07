@@ -11,7 +11,7 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
     excel_styler.apply_row_style(ws, row_idx, font, fill, border, alignment)
 
 def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
-    ws.freeze_panes = "A2"
+    ws.freeze_panes = "A3"
     ws.sheet_properties.outlinePr.summaryBelow = False
     
     now_str = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
@@ -22,10 +22,13 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     if ws.max_row == 1 and ws.cell(row=1, column=1).value is None:
         ws.append(config.HEADERS)
         for col_idx in range(1, len(config.HEADERS) + 1):
-            cell = ws.cell(row=1, column=col_idx)
+            cell = ws.cell(row=2, column=col_idx)
             cell.fill = config.FILL_HDR
             cell.font = config.FONT_HDR
-        excel_styler.apply_row_style(ws, 1, config.FONT_HDR, config.FILL_HDR, config.THIN_BORDER, config.ALIGN_C)
+            cell.border = config.THIN_BORDER
+
+
+
     
     json_path = "database.json"
     if not os.path.exists(json_path): return ws.max_row
