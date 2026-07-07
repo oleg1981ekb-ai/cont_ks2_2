@@ -70,29 +70,48 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                     mask = config.DOCUMENT_ROLES.get(d_name, {"СтрК": 1, "СДО": 1, "ГенДир": 1, "1 экз. З.": 1, "1 экз. П": 1, "Опл.": 1})
                     column_mapping = {"СтрК": 4, "СДО": 5, "ГенДир": 6, "1 экз. З.": 7, "1 экз. П": 8, "Опл.": 9}
                     
+                    # статус конкретного документа: СтрК/СДО
                     if isinstance(status_raw, dict) and d_name in status_raw:
                         doc_status_raw = status_raw[d_name]
                     else:
                         doc_status_raw = status_raw
 
                     status_date = doc_status_raw.get("date", "") if isinstance(doc_status_raw, dict) else ""
-                    
-                    if isinstance(doc_status_raw, dict):
-                        clean_status_value = doc_status_raw.get("value", "")
-                    else:
-                        clean_status_value = doc_status_raw
 
-                    for col_name, col_idx in column_mapping.items():
+                    print(f"DEBUG | Область: {direction} -> {sub_obj} | Документ: {d_name} | Содержимое строки базы: {doc_status_raw}")
+
+                    for col_name, col_letter_or_idx in config.COLUMN_MAPPING.items():
+                        if isinstance(col_letter_or_idx, str):
+                            col_letter = col_letter_or_idx
+                            col_idx = openpyxl.utils.column_index_from_string(col_letter)
+                        else:
+                            col_idx = int(col_letter_or_idx)
+
                         cell = ws.cell(row=doc_row, column=col_idx)
-                        if mask.get(col_name, 1) == 0:
+
+                        # Считываем статус конкретно для СтрК или СДО
+                        if isinstance(doc_status_raw, dict):
+                            # Если в базе лежит новый разделенный формат для СтрК и СДО
+                            clean_status_value = doc_status_raw.get(col_name, {}).get('value') if col_name in doc_status_raw else doc_status_raw.get('value')
+                        else:
+                            # Если в базе лежит старый плоский формат (только для СтрК)
+                            clean_status_value = doc_status_raw if col_name == "СтрК" else None
+
+                        if mask.get(col_name) == 0:
                             cell.fill = config.FILL_BLOCKED
                             cell.value = ""
                         else:
-                            if col_name == "СтрК":
+                            if clean_status_value is not None:
                                 excel_styler.format_status_cell(cell, clean_status_value)
-                    
+                            else:
+                                cell.fill = openpyxl.styles.PatternFill(fill_type=None)
+
                     # Логгер даты: Уровень 4
+
+
+
                     if mask.get("СтрК", 1) == 1 and status_date:
+
                         ws.append(["", f"    └─ Дата изменения СтрК: {status_date}", "", "", "", "", "", "", "", ""])
                         log_row = ws.max_row
                         excel_styler.apply_row_style(ws, log_row, excel_styler.FONT_LOG_DATE, None, config.THIN_BORDER, config.ALIGN_L)

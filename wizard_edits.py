@@ -7,7 +7,7 @@ def menu_edit_data(select_target_func):
     print("\n>> ВНЕСЕНИЕ ИЗМЕНЕНИЙ В ТАБЛИЦУ")
     db = db_core.load_db()
     if not db: return
-    print("Выберите тип изменений:\n 1. Изменить сумму месяца\n 2. Переименовать месяц\n 3. Изменить статус СтрК")
+    print("Выберите тип изменений:\n 1. Изменить сумму месяца\n 2. Переименовать месяц\n 3. Изменить статусы")
     sub_choice = input("Выберите действие (1-3): ").strip()
     if sub_choice not in ("1", "2", "3"): return
     
@@ -71,7 +71,15 @@ def menu_edit_data(select_target_func):
         db_core.update_config_months(new_mth_name)
 
     elif sub_choice == "3":
-        print("\nВыберите статус СтрК:\n 1. Зеленый | 2. Желтый | 3. Красный | 0. Очистить")
+        print("\nЧто изменить? 1 - СтрК, 2 - СДО")
+        which = input("Введите номер (1-2): ").strip()
+        if which not in ("1", "2"):
+            print(" [ОШИБКА] Неверный выбор.")
+            return
+
+        status_key = "СтрК" if which == "1" else "СДО"
+        
+        print(f"\nВыберите статус {status_key}:\n 1. Зеленый | 2. Желтый | 3. Красный | 0. Очистить")
         st_choice = input("Введите номер (0-3): ").strip()
         if st_choice not in ("1", "2", "3", "0"):
             print(" [ОШИБКА] Неверный статус.")
@@ -86,22 +94,44 @@ def menu_edit_data(select_target_func):
         apply_mode = input("Выберите вариант (1-2): ").strip()
 
         if apply_mode == "1":
-            db[target_dir][target_sub][target_mth]["status"] = {"value": status_value, "date": status_date}
+            current_status = db[target_dir][target_sub][target_mth].get("status", {})
+            # Если статусы хранятся раздельно по документам — делаем обновление по всем документам.
+            if isinstance(current_status, dict) and "value" in current_status:
+                # Старый формат: общий status=value/date
+                db[target_dir][target_sub][target_mth]["status"] = {"value": status_value, "date": status_date}
+            else:
+                # Новый формат: status[doc] = {value,date}
+                if not isinstance(current_status, dict) or not current_status:
+                    current_status = {}
+                if isinstance(current_status, dict) and "value" in current_status:
+                    # На всякий случай
+                    current_status = {}
+                for d_name in config.DOCUMENTS_LIST:
+                    mask = config.DOCUMENT_ROLES.get(d_name, {})
+                    if mask.get(status_key, 1) == 1:
+                        # гарантируем структуру
+                        if not isinstance(db[target_dir][target_sub][target_mth].get("status", {}), dict):
+                            db[target_dir][target_sub][target_mth]["status"] = {}
+                        db[target_dir][target_sub][target_mth].setdefault("status", {})[d_name] = {
+                            "value": status_value,
+                            "date": status_date,
+                        }
             db_core.save_db(db)
             wizard_git.register_action("status_changed")
-            print(f" [УСПЕХ] Статус успешно присвоен ВСЕМ документам периода!")
+            print(f" [УСПЕХ] Статус {status_key} успешно присвоен нужным документам периода!")
+
         elif apply_mode == "2":
             allowed_docs = []
             for doc_name in config.DOCUMENTS_LIST:
                 mask = config.DOCUMENT_ROLES.get(doc_name, {})
-                if mask.get("СтрК", 1) == 1:
+                if mask.get(status_key, 1) == 1:
                     allowed_docs.append(doc_name)
 
             if not allowed_docs:
-                print(" ⚠ [ВНИМАНИЕ] Нет доступных документов для СтрК!")
+                print(f" ⚠ [ВНИМАНИЕ] Нет доступных документов для {status_key}!")
                 return
 
-            print(f"\nДоступные документы для изменения СтрК:")
+            print(f"\nДоступные документы для изменения {status_key}:")
             for idx, doc_name in enumerate(allowed_docs, 1):
                 print(f" {idx}. {doc_name}")
             
@@ -112,15 +142,18 @@ def menu_edit_data(select_target_func):
             target_doc = allowed_docs[doc_idx]
 
             current_status = db[target_dir][target_sub][target_mth].get("status", {})
+            # Приводим к структуре status[doc] = {value,date}
             if not isinstance(current_status, dict) or "value" in current_status:
+                # Старый формат — разворачиваем в раздельный по документам
                 db[target_dir][target_sub][target_mth]["status"] = {}
                 for d_name in config.DOCUMENTS_LIST:
                     db[target_dir][target_sub][target_mth]["status"][d_name] = {
                         "value": current_status.get("value", "") if isinstance(current_status, dict) else "",
-                        "date": current_status.get("date", "") if isinstance(current_status, dict) else ""
+                        "date": current_status.get("date", "") if isinstance(current_status, dict) else "",
                     }
 
             db[target_dir][target_sub][target_mth]["status"][target_doc] = {"value": status_value, "date": status_date}
             db_core.save_db(db)
             wizard_git.register_action("status_changed")
-            print(f" [УСПЕХ] Статус документа '{target_doc}' успешно обновлен!")
+            print(f" [УСПЕХ] Статус {status_key} документа '{target_doc}' успешно обновлен!")
+

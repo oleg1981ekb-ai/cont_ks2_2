@@ -81,7 +81,7 @@ COLUMN_MAPPING = {
     "СДО": "E",
 }
 
-VERSION = "v1.3.0"
+VERSION = "v1.3.1"
 
 
 
