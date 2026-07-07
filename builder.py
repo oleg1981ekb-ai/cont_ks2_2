@@ -21,6 +21,10 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     
     if ws.max_row == 1 and ws.cell(row=1, column=1).value is None:
         ws.append(config.HEADERS)
+        for col_idx in range(1, len(config.HEADERS) + 1):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.fill = config.FILL_HDR
+            cell.font = config.FONT_HDR
         excel_styler.apply_row_style(ws, 1, config.FONT_HDR, config.FILL_HDR, config.THIN_BORDER, config.ALIGN_C)
     
     json_path = "database.json"
