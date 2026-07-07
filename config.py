@@ -31,13 +31,29 @@ FILL_HDR = FILL_DIR = PatternFill(start_color="1F4E78", end_color="1F4E78", fill
 FILL_OBJ = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
 FILL_MTH = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
 
-THIN_BORDER = Border(left=Side(style="thin", color="B0B0B0"), right=Side(style="thin", color="B0B0B0"), top=Side(style="thin", color="B0B0B0"), bottom=Side(style="thin", color="B0B0B0"))
+THIN_BORDER = Border(
+    left=Side(style="thin", color="B0B0B0"),
+    right=Side(style="thin", color="B0B0B0"),
+    top=Side(style="thin", color="B0B0B0"),
+    bottom=Side(style="thin", color="B0B0B0"),
+)
 
 ALIGN_C = Alignment(horizontal="center", vertical="center", wrap_text=True)
 ALIGN_L = Alignment(horizontal="left", vertical="center", wrap_text=True)
 ALIGN_R = Alignment(horizontal="right", vertical="center")
 
-HEADERS = ["№ п/п", "Наименование объекта / Месяц / Документ", "Сумма (руб.)", "СтрК", "СДО", "ГенДир", "1 экз. З.", "1 экз. П", "Опл.", "Текущий статус акта"]
+HEADERS = [
+    "№ п/п",
+    "Наименование объекта / Месяц / Документ",
+    "Сумма (руб.)",
+    "СтрК",
+    "СДО",
+    "ГенДир",
+    "1 экз. З.",
+    "1 экз. П",
+    "Опл.",
+    "Текущий статус акта",
+]
 
 # === МАСКИ ПОВЕДЕНИЯ (ТРАФАРЕТЫ ДЛЯ ДОКУМЕНТОВ) ===
 # 1 - колонка активна (белая), 0 - заблокирована (серая заливка)
@@ -46,20 +62,44 @@ ROLE_KS3      = {"СтрК": 0, "СДО": 1, "ГенДир": 1, "1 экз. З.":
 ROLE_INVOICE  = {"СтрК": 0, "СДО": 1, "ГенДир": 0, "1 экз. З.": 1, "1 экз. П": 1, "Опл.": 0}
 ROLE_EXEC_DOC = {"СтрК": 1, "СДО": 0, "ГенДир": 0, "1 экз. З.": 1, "1 экз. П": 1, "Опл.": 0}
 
+
 DOCUMENT_ROLES = {
     "Акт КС-2": ROLE_KS2,
     "Справка КС-3": ROLE_KS3,
     "Счет-фактура": ROLE_INVOICE,
     "Счет": ROLE_INVOICE,
-    "Исполнительная документация": ROLE_EXEC_DOC
+    "Исполнительная документация": ROLE_EXEC_DOC,
 }
 
 # Пастельно-серый цвет для блокировки неиспользуемых ячеек
 FILL_BLOCKED = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
 
-VERSION = "v1.2.1"
+# === ОТЛИЧИЯ СДО ДЛЯ СМЕЖНЫХ КОЛОНОК ===
+# СтрК: D, СДО: E
+COLUMN_MAPPING = {
+    "СтрК": "D",
+    "СДО": "E",
+}
+
+VERSION = "v1.3.0"
+
+
 
 # Дополнительные цвета для автоматической покраски статусов СтрК
-FILL_GREEN = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
-FILL_YELLOW = PatternFill(start_color='FFEB9C', end_color='FFEB9C', fill_type='solid')
-FILL_RED = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+FILL_GREEN = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+FILL_YELLOW = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+FILL_RED = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+
+# === ПОДДЕРЖКА СДО (аналогично СтрК) ===
+# Если захотите отличающуюся палитру для СДО — меняйте сюда.
+FILL_SDO_GREEN = FILL_GREEN
+FILL_SDO_YELLOW = FILL_YELLOW
+FILL_SDO_RED = FILL_RED
+
+# Цвета для статусов СДО (аналогично СтрК)
+SDO_STATUS_COLORS = {
+    "green": FILL_SDO_GREEN,
+    "yellow": FILL_SDO_YELLOW,
+    "red": FILL_SDO_RED,
+}
+
