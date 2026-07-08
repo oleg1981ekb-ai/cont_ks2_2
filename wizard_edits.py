@@ -56,6 +56,11 @@ def menu_edit_data(select_target_func):
                     continue
 
                 db[target_dir][target_sub][target_mth]["sum"] = cleaned_sum
+                db["_meta"] = {
+                    "last_changed_dir": target_dir,
+                    "last_changed_sub": target_sub,
+                    "is_new_change": True
+                }
                 db_core.save_db(db)
 
                 wizard_git.register_action("sum_changed")
@@ -81,11 +86,21 @@ def menu_edit_data(select_target_func):
             if input().strip() == "1":
                 old = db[target_dir][target_sub].pop(target_mth)
                 db[target_dir][target_sub][new_mth_name]["sum"] += float(old.get("sum", 0))
+                db["_meta"] = {
+                    "last_changed_dir": target_dir,
+                    "last_changed_sub": target_sub,
+                    "is_new_change": True
+                }
                 db_core.save_db(db)
                 wizard_git.register_action("sum_changed")
                 return
 
         db[target_dir][target_sub][new_mth_name] = db[target_dir][target_sub].pop(target_mth)
+        db["_meta"] = {
+            "last_changed_dir": target_dir,
+            "last_changed_sub": target_sub,
+            "is_new_change": True
+        }
         db_core.save_db(db)
         wizard_git.register_action("branch_added")
         db_core.update_config_months(new_mth_name)
@@ -161,6 +176,11 @@ def menu_edit_data(select_target_func):
                         # При наличии нескольких статусов в doc_entry — обновится только status_key.
                         doc_entry[status_key] = {"value": status_value, "date": status_date}
 
+            db["_meta"] = {
+                "last_changed_dir": target_dir,
+                "last_changed_sub": target_sub,
+                "is_new_change": True
+            }
             db_core.save_db(db)
             wizard_git.register_action("status_changed")
             print(f" [УСПЕХ] Статус {status_key} успешно присвоен нужным документам периода! (изолированно) ")
@@ -220,6 +240,11 @@ def menu_edit_data(select_target_func):
             doc_entry[status_key] = {"value": status_value, "date": status_date}
 
 
+            db["_meta"] = {
+                "last_changed_dir": target_dir,
+                "last_changed_sub": target_sub,
+                "is_new_change": True
+            }
             db_core.save_db(db)
             wizard_git.register_action("status_changed")
             print(f" [УСПЕХ] Статус {status_key} документа '{target_doc}' успешно обновлен!")

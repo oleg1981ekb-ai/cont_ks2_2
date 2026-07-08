@@ -35,8 +35,16 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     with open(json_path, "r", encoding="utf-8") as f:
         db = json.load(f)
         
+    # ЭТАП 1: Чтение метаданных на старте
+    meta = db.get("_meta", {}) if isinstance(db, dict) else {}
+    target_dir = meta.get("last_changed_dir")
+    target_sub = meta.get("last_changed_sub")
+    is_new = meta.get("is_new_change", False)
+
     row_counter = 1
     for direction in db.keys():
+        if direction == "_meta":
+            continue
         ws.append(["", str(direction), "", "", "", "", "", "", "", ""])
         excel_styler.apply_row_style(ws, ws.max_row, config.FONT_DIR, config.FILL_DIR, config.THIN_BORDER, config.ALIGN_L)
         ws.row_dimensions[ws.max_row].outline_level = 0
@@ -65,7 +73,13 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                 ws.cell(row=current_row, column=3).number_format = '#,##0.00'
                 ws.row_dimensions[current_row].outline_level = 2
                 row_counter += 1
-                
+
+                # Раскрытие последнего изменения (ЭТАП 2)
+                hidden_default = True
+                if is_new and direction == target_dir and sub_obj == target_sub:
+                    hidden_default = False
+                ws.row_dimensions[current_row].hidden = hidden_default
+
                 # Документы: Уровень 3
                 for d_name in config.DOCUMENTS_LIST:
                     ws.append(["", f"• {d_name}", "", "", "", "", "", "", "", ""])
@@ -135,6 +149,53 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     for row_idx in range(2, ws.max_row + 1):
         if ws.row_dimensions[row_idx].outline_level in (3, 4):
             ws.row_dimensions[row_idx].hidden = True
+
+    # Если флаг последнего изменения новый — раскрываем нужный Подобъект (ЭТАП 2)
+    if is_new and target_dir is not None and target_sub is not None:
+        for row_idx in range(2, ws.max_row + 1):
+            # Месяц: Уровень 2
+            if ws.row_dimensions[row_idx].outline_level == 2:
+                # В колонке B лежит название "direction/sub" или месяца; тут месяц в колонке B (индекс 2)
+                mth_name = ws.cell(row=row_idx, column=2).value
+                if mth_name is not None:
+                    # Для принадлежности к целевому направлению/подобъекту полагаемся на то, что нужный блок построен последовательно:
+                    # верхние строки direction и sub_obj ранее имеют другие outline_level.
+                    pass
+
+        # Практичный вариант: раскрываем ВСЕ строки после заголовков target_dir/target_sub,
+        # поскольку структура построения: direction(level0) -> sub_obj(level1) -> месяцы(level2) -> документы(level3).
+        # Найдём parent_row_idx (строка sub_obj) и затем раскрываем все строки внутри блока.
+        parent_row_idx = None
+        current_direction = None
+        current_sub = None
+        for row_idx in range(2, ws.max_row + 1):
+            if ws.row_dimensions[row_idx].outline_level == 0:
+                current_direction = ws.cell(row=row_idx, column=2).value
+            elif ws.row_dimensions[row_idx].outline_level == 1:
+                current_sub = ws.cell(row=row_idx, column=2).value
+
+            if current_direction == target_dir and current_sub == target_sub and ws.row_dimensions[row_idx].outline_level == 1:
+                parent_row_idx = row_idx
+                break
+
+        if parent_row_idx is not None:
+            # Раскрываем родительскую строку
+            ws.row_dimensions[parent_row_idx].hidden = False
+
+            # Раскрываем строки внутри блока до следующей строки outline_level==1 (другой sub_obj)
+            for row_idx in range(parent_row_idx + 1, ws.max_row + 1):
+                if ws.row_dimensions[row_idx].outline_level == 1:
+                    break
+                if ws.row_dimensions[row_idx].outline_level in (2, 3, 4):
+                    ws.row_dimensions[row_idx].hidden = False
+
+                    # На родительской (sub_obj) — show_detail()
+            # openpyxl: show_detail доступно только на уровнях Outline, поэтому дополнительно:
+            try:
+                ws.row_dimensions[parent_row_idx].show_detail()
+            except Exception:
+                pass
+
             
     # ИСПРАВЛЕНО: Безопасный автоподбор ширины через чтение первой ячейки кортежа col[0]
     for col in ws.columns:
@@ -143,10 +204,16 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
         col_letter = openpyxl.utils.get_column_letter(col_idx)
         for cell in col:
             if cell.value:
-                if isinstance(cell.value, (int, float)) and cell.column == 3:
-                    max_len = max(max_len, 18)
-                else:
-                    max_len = max(max_len, len(str(cell.value)))
+                    if isinstance(cell.value, (int, float)) and cell.column == 3:
+                        max_len = max(max_len, 18)
+                    else:
+                        max_len = max(max_len, len(str(cell.value)))
         ws.column_dimensions[col_letter].width = max(min(max_len + 3, 45), 12)
             
+            
+    # ЭТАП 3: Сброс флага в финале (чтобы следующий запуск открывался свернутым)
+    if isinstance(db, dict) and "_meta" in db:
+        db["_meta"]["is_new_change"] = False
+        db_core.save_db(db)
+
     return ws.max_row
