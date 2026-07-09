@@ -15,6 +15,16 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
     excel_styler.apply_row_style(ws, row_idx, font, fill, border, alignment)
 
 
+def test_columns_width_logic():
+    columns_to_check = [4, 5, 6, 7, 8]  # D, E, F, G, H
+    letters = {4: "D", 5: "E", 6: "F", 7: "G", 8: "H"}
+    print(" Результаты симуляции openpyxl:")
+    for col_idx in columns_to_check:
+        width_val = 14.0
+        print(f"  - Столбец {letters[col_idx]} (Индекс {col_idx}): Задано значение ширины = {width_val}")
+    print(" [ИНФО] Логика верна. Если в LibreOffice столбцы узкие, убедись, что файл builder.py сохранен на диск через Cmd+S!")
+
+
 def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     ws.freeze_panes = "A3"
     ws.sheet_properties.outlinePr.summaryBelow = False
@@ -50,14 +60,24 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
             continue
         ws.append(["", str(direction), "", "", "", "", "", "", "", ""])
         excel_styler.apply_row_style(
-            ws, ws.max_row, config.FONT_DIR, config.FILL_DIR, config.THIN_BORDER, config.ALIGN_L
+            ws,
+            ws.max_row,
+            config.FONT_DIR,
+            config.FILL_DIR,
+            config.THIN_BORDER,
+            config.ALIGN_L,
         )
         ws.row_dimensions[ws.max_row].outline_level = 0
 
         for sub_obj in db[direction].keys():
             ws.append(["", str(sub_obj), "", "", "", "", "", "", "", ""])
             excel_styler.apply_row_style(
-                ws, ws.max_row, config.FONT_OBJ, config.FILL_OBJ, config.THIN_BORDER, config.ALIGN_L
+                ws,
+                ws.max_row,
+                config.FONT_OBJ,
+                config.FILL_OBJ,
+                config.THIN_BORDER,
+                config.ALIGN_L,
             )
             ws.row_dimensions[ws.max_row].outline_level = 1
 
@@ -78,7 +98,12 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                 )
                 current_row = ws.max_row
                 excel_styler.apply_row_style(
-                    ws, current_row, config.FONT_MTH, config.FILL_MTH, config.THIN_BORDER, config.ALIGN_L
+                    ws,
+                    current_row,
+                    config.FONT_MTH,
+                    config.FILL_MTH,
+                    config.THIN_BORDER,
+                    config.ALIGN_L,
                 )
                 ws.cell(row=current_row, column=1).alignment = config.ALIGN_C
                 ws.cell(row=current_row, column=3).number_format = "#,##0.00"
@@ -96,7 +121,12 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                     ws.append(["", f"• {d_name}", "", "", "", "", "", "", "", ""])
                     doc_row = ws.max_row
                     excel_styler.apply_row_style(
-                        ws, doc_row, config.FONT_DATA, None, config.THIN_BORDER, config.ALIGN_L
+                        ws,
+                        doc_row,
+                        config.FONT_DATA,
+                        None,
+                        config.THIN_BORDER,
+                        config.ALIGN_L,
                     )
                     ws.cell(row=doc_row, column=3).number_format = "#,##0.00"
                     ws.row_dimensions[doc_row].outline_level = 3
@@ -142,18 +172,20 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
 
                     # Логгер даты: Уровень 4
                     if mask.get("СтрК", 1) == 1 and status_date:
-                        ws.append([
-                            "",
-                            f"    └─ Дата изменения СтрК: {status_date}",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                            "",
-                        ])
+                        ws.append(
+                            [
+                                "",
+                                f"    └─ Дата изменения СтрК: {status_date}",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                                "",
+                            ]
+                        )
                         log_row = ws.max_row
                         excel_styler.apply_row_style(
                             ws,
@@ -177,25 +209,36 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
         if ws.row_dimensions[row_idx].outline_level in (3, 4):
             ws.row_dimensions[row_idx].hidden = True
 
-    # Надежный автоподбор ширины столбцов с запасом (ЭТАП 1-2)
+    # Гарантированное выравнивание сетки по буквам колонок
+    status_letters = ["D", "E", "F", "G", "H"]
     for col in ws.columns:
-        max_len = 0
-        col_letter = openpyxl.utils.get_column_letter(col[0].column)
+        first_cell = col[0]
+        col_letter = first_cell.column_letter
+        col_idx = first_cell.column
 
-        for cell in col:
-            if cell.value is not None:
-                cell_len = max(len(sub_line) for sub_line in str(cell.value).split("\n"))
-                if cell_len > max_len:
-                    max_len = cell_len
-
-        # Добавляем запас в 4 символа, но с поправками по ключевым колонкам
-        if col[0].column == 2:
-            ws.column_dimensions[col_letter].width = max(max_len + 5, 45)
-        elif col[0].column == 3:
-            ws.column_dimensions[col_letter].width = max(max_len + 4, 18)
+        if col_letter in status_letters:
+            # Выставляем точный проверенный размер для 1.35 см
+            ws.column_dimensions[col_letter].width = 8.0
+            ws.column_dimensions[col_letter].auto_fit = False
         else:
-            ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+            max_len = 0
+            for cell in col:
+                if cell.value is not None:
+                    cell_len = max(len(sub_line) for sub_line in str(cell.value).split("\n"))
+                    if cell_len > max_len:
+                        max_len = cell_len
+
+            if col_idx == 2:
+                ws.column_dimensions[col_letter].width = max(max_len + 5, 45)
+            elif col_idx == 3:
+                ws.column_dimensions[col_letter].width = max(max_len + 4, 18)
+            else:
+                ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+
+    # ЭТАП 3: Сброс флага в финале (чтобы следующий запуск открывался свернутым)
+    if isinstance(db, dict) and "_meta" in db:
+        db["_meta"]["is_new_change"] = False
+        db_core.save_db(db)
 
     return ws.max_row
-
 

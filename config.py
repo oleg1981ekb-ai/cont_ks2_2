@@ -113,7 +113,7 @@ ROLES = {
 }
 
 
-VERSION = "v"
+VERSION = "v2. Мин Рабочий вариант"
 
 
 

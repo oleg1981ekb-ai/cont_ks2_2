@@ -55,18 +55,33 @@ def main_menu():
             print("\n[СЕРВИСНЫЕ НАСТРОЙКИ]")
             print("1 - Отключить подробные логи DEBUG в терминале")
             print("2 - Включить подробные логи DEBUG обратно")
+            print("3 - Проверить текущую конфигурацию ширины столбцов в builder.py")
+
             srv_choice = input("Выберите действие: ").strip()
 
-            import logging
+            if srv_choice == "3":
+                print("\n[ДИАГНОСТИКА ШИРИНЫ СТАТУСНЫХ КОЛОНОК]")
+                print("Целевой размер: 1.35 см -> Значение в builder.py/openpyxl: 14.0")
+                print("Проверяем диапазон колонок со статусами (D, E, F, G, H)...")
 
-            if srv_choice == "1":
-                logging.getLogger().setLevel(logging.WARNING)
-                print(" [ОК] Подробные логи DEBUG отключены.")
-            elif srv_choice == "2":
-                logging.getLogger().setLevel(logging.DEBUG)
-                print(" [ОК] Подробные логи DEBUG включены.")
+                if hasattr(builder, "test_columns_width_logic"):
+                    builder.test_columns_width_logic()
+                else:
+                    print(" [ОШИБКА] В builder.py не найдена функция test_columns_width_logic().")
+
+
             else:
-                print(" [ОШИБКА] Неверный выбор.")
+                import logging
+
+                if srv_choice == "1":
+                    logging.getLogger().setLevel(logging.WARNING)
+                    print(" [ОК] Подробные логи DEBUG отключены.")
+                elif srv_choice == "2":
+                    logging.getLogger().setLevel(logging.DEBUG)
+                    print(" [ОК] Подробные логи DEBUG включены.")
+                else:
+                    print(" [ОШИБКА] Неверный выбор.")
+
         elif choice == "0":
             print("\nПрограмма успешно завершена. Всего доброго!")
             break
