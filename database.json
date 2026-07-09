@@ -9,7 +9,7 @@
                         "date": "02.07",
                         "СтрК": {
                             "value": 1,
-                            "date": "08.07"
+                            "date": "09.07"
                         },
                         "СДО": {
                             "value": 1,
@@ -286,7 +286,7 @@
     },
     "_meta": {
         "last_changed_dir": "01_АНАПА (Таманская)",
-        "last_changed_sub": "02_1505_КН.",
+        "last_changed_sub": "01_271_КН",
         "is_new_change": false
     }
 }
