@@ -146,7 +146,7 @@
         },
         "03_538_КН": {
             "Июнь": {
-                "sum": 0,
+                "sum": 551863.05,
                 "status": ""
             },
             "Июль": {
@@ -376,7 +376,7 @@
     },
     "_meta": {
         "last_changed_dir": "01_АНАПА (Таманская)",
-        "last_changed_sub": "04_537_КН",
-        "is_new_change": false
+        "last_changed_sub": "03_538_КН",
+        "is_new_change": true
     }
 }
