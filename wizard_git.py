@@ -5,8 +5,10 @@ import config
 session_flags = {
     "sum_changed": False,
     "status_changed": False,
-    "branch_added": False
+    "contract_sum_changed": False,
+    "branch_added": False,
 }
+
 
 def register_action(action_type):
     if action_type in session_flags:
@@ -26,8 +28,13 @@ def calculate_next_version(current_ver):
     if session_flags["branch_added"]:
         minor += 1
         patch = 0
-    elif session_flags["sum_changed"] or session_flags["status_changed"]:
+    elif (
+        session_flags["sum_changed"]
+        or session_flags["status_changed"]
+        or session_flags.get("contract_sum_changed", False)
+    ):
         patch += 1
+
 
     return f"v{major}.{minor}.{patch}"
 
@@ -58,9 +65,15 @@ def run_git_sync():
     
     print("\n=== АНАЛИЗ ТЕКУЩЕЙ СЕССИИ ===")
     actions = []
-    if session_flags["branch_added"]: actions.append("• Добавлены новые ветки структуры (Направления/Подобъекты/Месяцы)")
-    if session_flags["sum_changed"]: actions.append("• Изменены бюджеты периодов")
-    if session_flags["status_changed"]: actions.append("• Обновлены статусы документов СтрК")
+    if session_flags["branch_added"]:
+        actions.append("• Добавлены новые ветки структуры (Направления/Подобъекты/Месяцы)")
+    if session_flags["sum_changed"]:
+        actions.append("• Изменены бюджеты периодов")
+    if session_flags["status_changed"]:
+        actions.append("• Обновлены статусы документов СтрК")
+    if session_flags.get("contract_sum_changed", False):
+        actions.append("• Изменены суммы договоров (строки объектов)")
+
     
     if not actions:
         print(" Изменений данных в сессии не зафиксировано (только пересборка Excel).")

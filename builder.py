@@ -81,6 +81,35 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
             )
             ws.row_dimensions[ws.max_row].outline_level = 1
 
+            # Сумма договора (строка объекта) -> колонка C (индекс 3)
+            obj_row = ws.max_row
+            contract_sum = ""
+            try:
+                contract_sum = db[direction][sub_obj].get("contract_sum", "")
+            except Exception:
+                contract_sum = ""
+
+            if contract_sum != "" and contract_sum is not None:
+                ws.cell(row=obj_row, column=3, value=float(contract_sum))
+                ws.cell(row=obj_row, column=3).number_format = "#,##0.00"
+
+                from openpyxl.styles import Font, Side, Border
+
+                # Жирный шрифт
+                ws.cell(row=obj_row, column=3).font = Font(name="Calibri", size=11, bold=True, color="000000")
+
+                # Нижнее подчёркивание: тонкая нижняя граница
+                bottom_side = Side(style="thin", color="B0B0B0")
+                ws.cell(row=obj_row, column=3).border = Border(
+                    left=None,
+                    right=None,
+                    top=None,
+                    bottom=bottom_side,
+                )
+            else:
+                ws.cell(row=obj_row, column=3).value = ""
+
+
             raw_months = list(db[direction][sub_obj].keys())
             available_months = [m for m in db_core.ALL_YEAR_MONTHS if m in raw_months]
 

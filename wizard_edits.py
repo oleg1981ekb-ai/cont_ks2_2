@@ -15,13 +15,16 @@ def menu_edit_data(select_target_func):
         " 1. Изменить сумму месяца\n"
         " 2. Переименовать месяц\n"
         " 3. Изменить статусы\n"
-        " 4. Удалить (месяц / подобъект / направление) с подтверждением"
+        " 4. Удалить (месяц / подобъект / направление) с подтверждением\n"
+        " 5. Изменить общую сумму договора (строка объекта)"
+
     )
-    sub_choice = input("Выберите действие (1-4) или 0 для Назад: ").strip()
+    sub_choice = input("Выберите действие (1-5) или 0 для Назад: ").strip()
     if sub_choice == "0":
         return
-    if sub_choice not in ("1", "2", "3", "4"):
+    if sub_choice not in ("1", "2", "3", "4", "5"):
         return
+
 
     # Общая точка выбора (direction/sub_obj). Для варианта 4 могут потребоваться дополнительные шаги выбора.
     target_dir, target_sub = select_target_func(db, allow_new=False)
@@ -318,7 +321,40 @@ def menu_edit_data(select_target_func):
             wizard_git.register_action("status_changed")
             print(f" [УСПЕХ] Статус {status_key} документа '{target_doc}' успешно обновлен!")
 
+    elif sub_choice == "5":
+        # === СУММА ДОГОВОРА: строка объекта (direction/sub_obj) ===
+        # Общая сумма договора хранится на уровне db[direction][sub_obj]
+        current_contract_sum = db[target_dir][target_sub].get("contract_sum", 0.0)
+        print(f"\nТекущая общая сумма договора для '{target_sub}': {db_core.fmt_money(current_contract_sum)} руб.")
+        
+        while True:
+            new_contract_sum_str = input("Введите общую сумму договора (руб.) (или '0' чтобы очистить): ").strip()
+            if new_contract_sum_str.lower() == "выход":
+                return
+            if new_contract_sum_str == "0" or new_contract_sum_str == "":
+                db[target_dir][target_sub]["contract_sum"] = 0.0
+                break
+            try:
+                cleaned_sum = float(new_contract_sum_str.replace(" ", "").replace(",", "."))
+                if cleaned_sum < 0:
+                    print(" ❌ [ОШИБКА] Сумма договора не может быть отрицательной!")
+                    continue
+                db[target_dir][target_sub]["contract_sum"] = cleaned_sum
+                break
+            except ValueError:
+                print(" ❌ [ОШИБКА ВВОДА] Введите число без букв!")
+
+        db["_meta"] = {
+            "last_changed_dir": target_dir,
+            "last_changed_sub": target_sub,
+            "is_new_change": True,
+        }
+        db_core.save_db(db)
+        wizard_git.register_action("contract_sum_changed")
+        print(f" [УСПЕХ] Общая сумма договора обновлена: {db_core.fmt_money(db[target_dir][target_sub]['contract_sum'])} руб.")
+
     elif sub_choice == "4":
+
         # === УДАЛЕНИЕ: собрать в одну кнопку 4 ===
         print("\n[УДАЛЕНИЕ] Выберите объект для удаления:")
         print(" 1. Месяц")
