@@ -40,7 +40,13 @@ def menu_edit_data(select_target_func):
     months_in_db = list(db[target_dir][target_sub].keys())
     print("\nТекущие активные периоды:")
     for idx, m in enumerate(months_in_db, 1):
-        st_raw = db[target_dir][target_sub][m].get("status", "")
+        month_data = db[target_dir][target_sub].get(m, {})
+        if not isinstance(month_data, dict):
+            fmt_sum = db_core.fmt_money(month_data)
+            print(f" {idx}. {m} (Сумма: {fmt_sum} руб. | СтрК: Нет)")
+            continue
+
+        st_raw = month_data.get("status", "")
         st_val = (
             "Раздельный по док."
             if isinstance(st_raw, dict) and "value" not in st_raw
@@ -50,8 +56,9 @@ def menu_edit_data(select_target_func):
                 else (st_raw if st_raw else "Нет")
             )
         )
-        fmt_sum = db_core.fmt_money(db[target_dir][target_sub][m].get("sum", 0))
+        fmt_sum = db_core.fmt_money(month_data.get("sum", 0))
         print(f" {idx}. {m} (Сумма: {fmt_sum} руб. | СтрК: {st_val})")
+
 
     m_choice = input("\nВыберите номер периода (0 для Назад): ").strip()
     if m_choice == "0":

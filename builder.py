@@ -119,7 +119,11 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
 
             for mth in available_months:
                 mth_data = db[direction][sub_obj][mth]
+                # Защита: если по ошибке в БД вместо dict записано число/float — пропускаем обработку статусов
+                if not isinstance(mth_data, dict):
+                    continue
                 status_raw = mth_data.get("status", "")
+
 
                 # Месяц: Уровень 2
                 ws.append(
