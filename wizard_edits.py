@@ -17,12 +17,19 @@ def menu_edit_data(select_target_func):
         " 3. Изменить статусы\n"
         " 4. Удалить (месяц / подобъект / направление) с подтверждением"
     )
-    sub_choice = input("Выберите действие (1-4): ").strip()
+    sub_choice = input("Выберите действие (1-4) или 0 для Назад: ").strip()
+    if sub_choice == "0":
+        return
     if sub_choice not in ("1", "2", "3", "4"):
         return
 
     # Общая точка выбора (direction/sub_obj). Для варианта 4 могут потребоваться дополнительные шаги выбора.
     target_dir, target_sub = select_target_func(db, allow_new=False)
+    if target_dir is None and target_sub is None:
+        return
+    if target_dir is None and target_sub is not None:
+        # 0 на выборе Подобъекта => назад к выбору действия
+        return
     if not target_dir or not target_sub:
         return
 
@@ -43,7 +50,9 @@ def menu_edit_data(select_target_func):
         fmt_sum = db_core.fmt_money(db[target_dir][target_sub][m].get("sum", 0))
         print(f" {idx}. {m} (Сумма: {fmt_sum} руб. | СтрК: {st_val})")
 
-    m_choice = input("\nВыберите номер периода: ").strip()
+    m_choice = input("\nВыберите номер периода (0 для Назад): ").strip()
+    if m_choice == "0":
+        return
     if not m_choice or not m_choice.isdigit():
         return
     m_idx = int(m_choice) - 1
@@ -55,7 +64,7 @@ def menu_edit_data(select_target_func):
         while True:
             new_sum_str = input("\nВведите новую сумму (или '0' для выхода в меню): ").strip()
             if new_sum_str.lower() in ("выход", "0"):
-                break
+                return
             try:
                 cleaned_sum = float(new_sum_str.replace(" ", "").replace(",", "."))
                 if cleaned_sum < 0:
@@ -80,12 +89,14 @@ def menu_edit_data(select_target_func):
         # === Переименование месяца с пометкой '(УЖЕ ЕСТЬ)' при наличии месяца в той же ветке ===
         active_months = list(db[target_dir][target_sub].keys())
 
-        print("\nВыберите НОВОЕ название месяца (при наличии будет пометка '(УЖЕ ЕСТЬ)'):")
+        print("\nВыберите НОВОЕ название месяца (при наличии будет пометка '(УЖЕ ЕСТЬ)'): ")
         for i, m_name in enumerate(db_core.ALL_YEAR_MONTHS, 1):
             marker = " (УЖЕ ЕСТЬ)" if m_name in active_months else ""
             print(f" {i}. {m_name}{marker}")
 
-        new_mth_choice = input("\nВведите номер (1-12): ").strip()
+        new_mth_choice = input("\nВведите номер (1-12) или 0 для Назад: ").strip()
+        if new_mth_choice == "0":
+            return
         if not new_mth_choice or not new_mth_choice.isdigit():
             return
 
@@ -131,7 +142,9 @@ def menu_edit_data(select_target_func):
 
     elif sub_choice == "3":
         print("\nЧто изменить? 1 - СтрК, 2 - СДО, 3 - ГенДир, 4 - 1 экз. З., 5 - 1 экз. П")
-        which = input("Введите номер (1-6): ").strip()
+        which = input("Введите номер (1-6) или 0 для Назад: ").strip()
+        if which == "0":
+            return
         if which not in ("1", "2", "3", "4", "5", "6"):
             print(" [ОШИБКА] Неверный выбор.")
             return
@@ -312,18 +325,23 @@ def menu_edit_data(select_target_func):
         print(" 2. Подобъект (под-объект) — удалить направление/sub_obj полностью")
         print(" 3. Направление — удалить direction полностью")
 
-        del_level = input("Выберите уровень (1-3): ").strip()
+        del_level = input("Выберите уровень (1-3) или 0 для Назад: ").strip()
+        if del_level == "0":
+            return
         if del_level not in ("1", "2", "3"):
             return
 
         if del_level == "1":
-            # месяцы: используем уже выбранный target_mth
             cur_sum = db[target_dir][target_sub][target_mth].get("sum", 0)
             cur_status = db[target_dir][target_sub][target_mth].get("status", {})
             print(f"\nБудет удален месяц: {target_mth}")
             print(f" Текущая сумма: {cur_sum}")
             print(f" Текущий status (кратко): {'dict' if isinstance(cur_status, dict) else cur_status}")
-            confirm = input(f"Подтвердите удаление месяца '{target_mth}'? (1=Да / 2=Нет): ").strip()
+            confirm = input(
+                f"Подтвердите удаление месяца '{target_mth}'? (1=Да / 2=Нет, 0=Назад): "
+            ).strip()
+            if confirm == "0":
+                return
             if confirm != "1":
                 return
             db[target_dir][target_sub].pop(target_mth, None)
@@ -337,11 +355,12 @@ def menu_edit_data(select_target_func):
             print(f" [УСПЕХ] Месяц '{target_mth}' удален.")
 
         elif del_level == "2":
-            # удалить sub_obj
             months_cnt = len(db[target_dir].get(target_sub, {}))
             confirm = input(
-                f"Подтвердите удаление подобъекта '{target_sub}' в направлении '{target_dir}'? (1=Да / 2=Нет). Месяцев: {months_cnt}: "
+                f"Подтвердите удаление подобъекта '{target_sub}' в направлении '{target_dir}'? (1=Да / 2=Нет, 0=Назад). Месяцев: {months_cnt}: "
             ).strip()
+            if confirm == "0":
+                return
             if confirm != "1":
                 return
             db[target_dir].pop(target_sub, None)
@@ -355,11 +374,12 @@ def menu_edit_data(select_target_func):
             print(f" [УСПЕХ] Подобъект '{target_sub}' удален.")
 
         elif del_level == "3":
-            # удалить direction целиком
             sub_cnt = len(db.get(target_dir, {}))
             confirm = input(
-                f"Подтвердите удаление направления '{target_dir}'? (1=Да / 2=Нет). Подобъектов: {sub_cnt}: "
+                f"Подтвердите удаление направления '{target_dir}'? (1=Да / 2=Нет, 0=Назад). Подобъектов: {sub_cnt}: "
             ).strip()
+            if confirm == "0":
+                return
             if confirm != "1":
                 return
             db.pop(target_dir, None)
