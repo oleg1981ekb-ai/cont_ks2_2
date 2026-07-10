@@ -10,15 +10,23 @@ def menu_edit_data(select_target_func):
     if not db:
         return
 
-    print("Выберите тип изменений:\n 1. Изменить сумму месяца\n 2. Переименовать месяц\n 3. Изменить статусы")
-    sub_choice = input("Выберите действие (1-3): ").strip()
-    if sub_choice not in ("1", "2", "3"):
+    print(
+        "Выберите тип изменений:\n"
+        " 1. Изменить сумму месяца\n"
+        " 2. Переименовать месяц\n"
+        " 3. Изменить статусы\n"
+        " 4. Удалить (месяц / подобъект / направление) с подтверждением"
+    )
+    sub_choice = input("Выберите действие (1-4): ").strip()
+    if sub_choice not in ("1", "2", "3", "4"):
         return
 
+    # Общая точка выбора (direction/sub_obj). Для варианта 4 могут потребоваться дополнительные шаги выбора.
     target_dir, target_sub = select_target_func(db, allow_new=False)
     if not target_dir or not target_sub:
         return
 
+    # === ВАРИАНТ 1: сумма месяца ===
     months_in_db = list(db[target_dir][target_sub].keys())
     print("\nТекущие активные периоды:")
     for idx, m in enumerate(months_in_db, 1):
@@ -32,7 +40,6 @@ def menu_edit_data(select_target_func):
                 else (st_raw if st_raw else "Нет")
             )
         )
-        # ИСПРАВЛЕНО: Добавлено красивое форматирование разрядов пробелами при выводе списка
         fmt_sum = db_core.fmt_money(db[target_dir][target_sub][m].get("sum", 0))
         print(f" {idx}. {m} (Сумма: {fmt_sum} руб. | СтрК: {st_val})")
 
@@ -59,12 +66,11 @@ def menu_edit_data(select_target_func):
                 db["_meta"] = {
                     "last_changed_dir": target_dir,
                     "last_changed_sub": target_sub,
-                    "is_new_change": True
+                    "is_new_change": True,
                 }
                 db_core.save_db(db)
 
                 wizard_git.register_action("sum_changed")
-                # ИСПРАВЛЕНО: Форматирование разрядов при выводе сообщения об успехе
                 print(f"  [УСПЕХ] Бюджет успешно обновлен на: {db_core.fmt_money(cleaned_sum)} руб.")
                 break
             except ValueError:
@@ -89,7 +95,7 @@ def menu_edit_data(select_target_func):
                 db["_meta"] = {
                     "last_changed_dir": target_dir,
                     "last_changed_sub": target_sub,
-                    "is_new_change": True
+                    "is_new_change": True,
                 }
                 db_core.save_db(db)
                 wizard_git.register_action("sum_changed")
@@ -99,7 +105,7 @@ def menu_edit_data(select_target_func):
         db["_meta"] = {
             "last_changed_dir": target_dir,
             "last_changed_sub": target_sub,
-            "is_new_change": True
+            "is_new_change": True,
         }
         db_core.save_db(db)
         wizard_git.register_action("branch_added")
@@ -123,16 +129,13 @@ def menu_edit_data(select_target_func):
         else:
             status_key = "1 экз. П"
 
-        # Покажем текущее значение выбранного status_key в периоде (value/date) перед вводом нового.
         tmp_status = db[target_dir][target_sub][target_mth].get("status", {})
         cur_value = ""
         cur_date = ""
         if isinstance(tmp_status, dict) and "value" in tmp_status:
-            # старый формат: status = {value, date}
             cur_value = tmp_status.get("value", "")
             cur_date = tmp_status.get("date", "")
         elif isinstance(tmp_status, dict):
-            # новый формат: status[doc][status_key]
             for d_name in config.DOCUMENTS_LIST:
                 doc_obj = tmp_status.get(d_name)
                 if not isinstance(doc_obj, dict):
@@ -160,21 +163,13 @@ def menu_edit_data(select_target_func):
         apply_mode = input("Выберите вариант (1-2): ").strip()
 
         if apply_mode == "1":
-            # Обновляем строго выбранный статус-ключ, не перезаписывая соседние статусы.
-            # Ожидаем структуру: status = {<doc_name>: {<status_key>: {value,date}}}
-            # но поддерживаем совместимость со старыми форматами.
             current_status = db[target_dir][target_sub][target_mth].get("status", {})
-
-            # Старый формат: общий "status" = {value,date} — это НЕ раздельные по ключам статусы.
             if isinstance(current_status, dict) and "value" in current_status:
-                # В этом формате действительно единственный статус — обновляем его.
                 db[target_dir][target_sub][target_mth]["status"] = {"value": status_value, "date": status_date}
             else:
-                # Новый формат: status[doc] = {value,date} или status[doc][status_key] = {value,date}
                 if not isinstance(current_status, dict):
                     current_status = {}
 
-                # гарантируем, что в месяце есть dict по status
                 if not isinstance(db[target_dir][target_sub][target_mth].get("status", {}), dict):
                     db[target_dir][target_sub][target_mth]["status"] = {}
 
@@ -188,20 +183,15 @@ def menu_edit_data(select_target_func):
                         doc_entry = {}
                         db[target_dir][target_sub][target_mth].setdefault("status", {})[d_name] = doc_entry
 
-                    # Изолированное обновление выбранного ключа
-                    # Если структура уже status[doc][status_key]
                     if status_key in doc_entry and isinstance(doc_entry[status_key], dict):
                         doc_entry[status_key] = {"value": status_value, "date": status_date}
                     else:
-                        # Если структура старая: status[doc] = {value,date}, то обновляем ТОЛЬКО value/date для этого документа,
-                        # не затрагивая другие status_key (если они присутствуют где-то ещё).
-                        # При наличии нескольких статусов в doc_entry — обновится только status_key.
                         doc_entry[status_key] = {"value": status_value, "date": status_date}
 
             db["_meta"] = {
                 "last_changed_dir": target_dir,
                 "last_changed_sub": target_sub,
-                "is_new_change": True
+                "is_new_change": True,
             }
             db_core.save_db(db)
             wizard_git.register_action("status_changed")
@@ -231,17 +221,12 @@ def menu_edit_data(select_target_func):
                 return
 
             target_doc = allowed_docs[doc_idx]
-
             current_status = db[target_dir][target_sub][target_mth].get("status", {})
 
-            # Приводим к структуре status[doc] либо status[doc][status_key].
             if not isinstance(current_status, dict):
                 current_status = {}
 
             if "value" in current_status:
-                # Старый формат: status = {value,date} (один общий статус) —
-                # корректно разворачиваем в status[doc] = {status_key: {value,date}}.
-                # Важно: сохраняем независимость статусов по ключам.
                 db[target_dir][target_sub][target_mth]["status"] = {}
                 for d_name in config.DOCUMENTS_LIST:
                     db[target_dir][target_sub][target_mth]["status"][d_name] = {
@@ -251,21 +236,86 @@ def menu_edit_data(select_target_func):
                         }
                     }
 
-            # Достаём entry именно для выбранного документа.
             doc_entry = db[target_dir][target_sub][target_mth].setdefault("status", {}).get(target_doc)
             if not isinstance(doc_entry, dict):
                 doc_entry = {}
                 db[target_dir][target_sub][target_mth].setdefault("status", {})[target_doc] = doc_entry
 
-            # Изолированно обновляем конкретный статус-ключ, не затрагивая соседние ключи.
             doc_entry[status_key] = {"value": status_value, "date": status_date}
 
             db["_meta"] = {
                 "last_changed_dir": target_dir,
                 "last_changed_sub": target_sub,
-                "is_new_change": True
+                "is_new_change": True,
             }
             db_core.save_db(db)
             wizard_git.register_action("status_changed")
             print(f" [УСПЕХ] Статус {status_key} документа '{target_doc}' успешно обновлен!")
+
+    elif sub_choice == "4":
+        # === УДАЛЕНИЕ: собрать в одну кнопку 4 ===
+        print("\n[УДАЛЕНИЕ] Выберите объект для удаления:")
+        print(" 1. Месяц")
+        print(" 2. Подобъект (под-объект) — удалить направление/sub_obj полностью")
+        print(" 3. Направление — удалить direction полностью")
+
+        del_level = input("Выберите уровень (1-3): ").strip()
+        if del_level not in ("1", "2", "3"):
+            return
+
+        if del_level == "1":
+            # месяцы: используем уже выбранный target_mth
+            cur_sum = db[target_dir][target_sub][target_mth].get("sum", 0)
+            cur_status = db[target_dir][target_sub][target_mth].get("status", {})
+            print(f"\nБудет удален месяц: {target_mth}")
+            print(f" Текущая сумма: {cur_sum}")
+            print(f" Текущий status (кратко): {'dict' if isinstance(cur_status, dict) else cur_status}")
+            confirm = input(f"Подтвердите удаление месяца '{target_mth}'? (1=Да / 2=Нет): ").strip()
+            if confirm != "1":
+                return
+            db[target_dir][target_sub].pop(target_mth, None)
+            db["_meta"] = {
+                "last_changed_dir": target_dir,
+                "last_changed_sub": target_sub,
+                "is_new_change": True,
+            }
+            db_core.save_db(db)
+            wizard_git.register_action("month_deleted")
+            print(f" [УСПЕХ] Месяц '{target_mth}' удален.")
+
+        elif del_level == "2":
+            # удалить sub_obj
+            months_cnt = len(db[target_dir].get(target_sub, {}))
+            confirm = input(
+                f"Подтвердите удаление подобъекта '{target_sub}' в направлении '{target_dir}'? (1=Да / 2=Нет). Месяцев: {months_cnt}: "
+            ).strip()
+            if confirm != "1":
+                return
+            db[target_dir].pop(target_sub, None)
+            db["_meta"] = {
+                "last_changed_dir": target_dir,
+                "last_changed_sub": target_sub,
+                "is_new_change": True,
+            }
+            db_core.save_db(db)
+            wizard_git.register_action("sub_object_deleted")
+            print(f" [УСПЕХ] Подобъект '{target_sub}' удален.")
+
+        elif del_level == "3":
+            # удалить direction целиком
+            sub_cnt = len(db.get(target_dir, {}))
+            confirm = input(
+                f"Подтвердите удаление направления '{target_dir}'? (1=Да / 2=Нет). Подобъектов: {sub_cnt}: "
+            ).strip()
+            if confirm != "1":
+                return
+            db.pop(target_dir, None)
+            db["_meta"] = {
+                "last_changed_dir": target_dir,
+                "last_changed_sub": target_sub,
+                "is_new_change": True,
+            }
+            db_core.save_db(db)
+            wizard_git.register_action("direction_deleted")
+            print(f" [УСПЕХ] Направление '{target_dir}' удалено.")
 
