@@ -113,8 +113,8 @@ def menu_edit_data(select_target_func):
 
     elif sub_choice == "3":
         print("\nЧто изменить? 1 - СтрК, 2 - СДО, 3 - ГенДир, 4 - 1 экз. З., 5 - 1 экз. П")
-        which = input("Введите номер (1-5): ").strip()
-        if which not in ("1", "2", "3", "4", "5"):
+        which = input("Введите номер (1-6): ").strip()
+        if which not in ("1", "2", "3", "4", "5", "6"): 
             print(" [ОШИБКА] Неверный выбор.")
             return
 
@@ -126,10 +126,48 @@ def menu_edit_data(select_target_func):
             status_key = "ГенДир"
         elif which == "4":
             status_key = "1 экз. З."
-        else:
+        elif which == "5":
             status_key = "1 экз. П"
+        else:
+            status_key = None
+
+
+
+
+        if which == "6":
+            status_value = 3
+            status_date = db_core.get_short_date()
+
+            month_obj = db[target_dir][target_sub][target_mth]
+            month_status = month_obj.get("status", {})
+            if not isinstance(month_status, dict):
+                month_status = {}
+            month_obj["status"] = month_status
+
+            for d_name in config.DOCUMENTS_LIST:
+                doc_entry = month_obj.setdefault("status", {}).setdefault(d_name, {})
+                if not isinstance(doc_entry, dict):
+                    doc_entry = {}
+                    month_obj["status"][d_name] = doc_entry
+
+                for sk in ("СтрК", "СДО", "ГенДир", "1 экз. З.", "1 экз. П"):
+                    mask = config.DOCUMENT_ROLES.get(d_name, {})
+                    if mask.get(sk, 1) != 1:
+                        continue
+                    doc_entry[sk] = {"value": status_value, "date": status_date}
+
+            db["_meta"] = {
+                "last_changed_dir": target_dir,
+                "last_changed_sub": target_sub,
+                "is_new_change": True,
+            }
+            db_core.save_db(db)
+            wizard_git.register_action("status_mark_not_started")
+            print(" [УСПЕХ] Все доступные ячейки проставлены как не начатые (3).")
+            return
 
         tmp_status = db[target_dir][target_sub][target_mth].get("status", {})
+
         cur_value = ""
         cur_date = ""
         if isinstance(tmp_status, dict) and "value" in tmp_status:
