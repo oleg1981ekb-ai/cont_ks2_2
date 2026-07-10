@@ -77,9 +77,13 @@ def menu_edit_data(select_target_func):
                 print(" ❌ [ОШИБКА ВВОДА] Введите число без букв!")
 
     elif sub_choice == "2":
-        print("\nВыберите НОВОЕ название месяца:")
+        # === Переименование месяца с пометкой '(УЖЕ ЕСТЬ)' при наличии месяца в той же ветке ===
+        active_months = list(db[target_dir][target_sub].keys())
+
+        print("\nВыберите НОВОЕ название месяца (при наличии будет пометка '(УЖЕ ЕСТЬ)'):")
         for i, m_name in enumerate(db_core.ALL_YEAR_MONTHS, 1):
-            print(f" {i}. {m_name}")
+            marker = " (УЖЕ ЕСТЬ)" if m_name in active_months else ""
+            print(f" {i}. {m_name}{marker}")
 
         new_mth_choice = input("\nВведите номер (1-12): ").strip()
         if not new_mth_choice or not new_mth_choice.isdigit():
@@ -87,20 +91,34 @@ def menu_edit_data(select_target_func):
 
         new_mth_name = db_core.ALL_YEAR_MONTHS[int(new_mth_choice) - 1]
 
+        # если пользователь выбрал тот же месяц — ничего не делаем
+        if new_mth_name == target_mth:
+            print("\nℹ Переименование не требуется: выбран тот же месяц.")
+            return
+
+        # согласование конфликта: новый месяц уже существует
         if new_mth_name in db[target_dir][target_sub]:
-            print(" ⚠ Месяц уже существует! Объединяем бюджеты? (1-Да / 2-Нет)")
-            if input().strip() == "1":
-                old = db[target_dir][target_sub].pop(target_mth)
-                db[target_dir][target_sub][new_mth_name]["sum"] += float(old.get("sum", 0))
-                db["_meta"] = {
-                    "last_changed_dir": target_dir,
-                    "last_changed_sub": target_sub,
-                    "is_new_change": True,
-                }
-                db_core.save_db(db)
-                wizard_git.register_action("sum_changed")
+            print(
+                f"\n⚠ Месяц '{new_mth_name}' уже существует в этой ветке. "
+                "Как согласовать?\n 1. Слить бюджеты (старый -> существующий)\n 2. Отменить переименование"
+            )
+            confirm = input("\nВаш выбор (1-2): ").strip()
+            if confirm != "1":
                 return
 
+            old = db[target_dir][target_sub].pop(target_mth)
+            db[target_dir][target_sub][new_mth_name]["sum"] += float(old.get("sum", 0))
+
+            db["_meta"] = {
+                "last_changed_dir": target_dir,
+                "last_changed_sub": target_sub,
+                "is_new_change": True,
+            }
+            db_core.save_db(db)
+            wizard_git.register_action("sum_changed")
+            return
+
+        # бесконфликтное переименование
         db[target_dir][target_sub][new_mth_name] = db[target_dir][target_sub].pop(target_mth)
         db["_meta"] = {
             "last_changed_dir": target_dir,
@@ -114,7 +132,7 @@ def menu_edit_data(select_target_func):
     elif sub_choice == "3":
         print("\nЧто изменить? 1 - СтрК, 2 - СДО, 3 - ГенДир, 4 - 1 экз. З., 5 - 1 экз. П")
         which = input("Введите номер (1-6): ").strip()
-        if which not in ("1", "2", "3", "4", "5", "6"): 
+        if which not in ("1", "2", "3", "4", "5", "6"):
             print(" [ОШИБКА] Неверный выбор.")
             return
 
@@ -130,9 +148,6 @@ def menu_edit_data(select_target_func):
             status_key = "1 экз. П"
         else:
             status_key = None
-
-
-
 
         if which == "6":
             status_value = 3
