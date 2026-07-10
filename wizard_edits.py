@@ -123,6 +123,28 @@ def menu_edit_data(select_target_func):
         else:
             status_key = "1 экз. П"
 
+        # Покажем текущее значение выбранного status_key в периоде (value/date) перед вводом нового.
+        tmp_status = db[target_dir][target_sub][target_mth].get("status", {})
+        cur_value = ""
+        cur_date = ""
+        if isinstance(tmp_status, dict) and "value" in tmp_status:
+            # старый формат: status = {value, date}
+            cur_value = tmp_status.get("value", "")
+            cur_date = tmp_status.get("date", "")
+        elif isinstance(tmp_status, dict):
+            # новый формат: status[doc][status_key]
+            for d_name in config.DOCUMENTS_LIST:
+                doc_obj = tmp_status.get(d_name)
+                if not isinstance(doc_obj, dict):
+                    continue
+                sk_obj = doc_obj.get(status_key)
+                if isinstance(sk_obj, dict) and ("value" in sk_obj or "date" in sk_obj):
+                    cur_value = sk_obj.get("value", "")
+                    cur_date = sk_obj.get("date", "")
+                    break
+
+        print(f"\nТекущее значение для '{status_key}' в периоде '{target_mth}': {cur_value} (дата: {cur_date})")
+
         print(f"\nВыберите статус {status_key}:\n 1. Зеленый | 2. Желтый | 3. Красный | 0. Очистить")
         st_choice = input("Введите номер (0-3): ").strip()
         if st_choice not in ("1", "2", "3", "0"):
@@ -185,7 +207,6 @@ def menu_edit_data(select_target_func):
             wizard_git.register_action("status_changed")
             print(f" [УСПЕХ] Статус {status_key} успешно присвоен нужным документам периода! (изолированно) ")
 
-
         elif apply_mode == "2":
             allowed_docs = []
             for doc_name in config.DOCUMENTS_LIST:
@@ -238,7 +259,6 @@ def menu_edit_data(select_target_func):
 
             # Изолированно обновляем конкретный статус-ключ, не затрагивая соседние ключи.
             doc_entry[status_key] = {"value": status_value, "date": status_date}
-
 
             db["_meta"] = {
                 "last_changed_dir": target_dir,
