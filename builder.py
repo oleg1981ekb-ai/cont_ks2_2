@@ -150,8 +150,19 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                 ws.row_dimensions[current_row].hidden = hidden_default
 
                 # Документы: Уровень 3
+                # Динамические документы печатаем только если они добавлены пользователем в этом месяце.
+                extra_docs = mth_data.get("extra_docs", []) if isinstance(mth_data, dict) else []
+                if not isinstance(extra_docs, list):
+                    extra_docs = []
+
+                dynamic_extra_set = {"Акт передачи оборудования", "Акт расхода давальческих материалов"}
+
                 for d_name in config.DOCUMENTS_LIST:
+                    if d_name in dynamic_extra_set and d_name not in extra_docs:
+                        continue
+
                     ws.append(["", f"• {d_name}", "", "", "", "", "", "", "", ""])
+
                     doc_row = ws.max_row
                     excel_styler.apply_row_style(
                         ws,

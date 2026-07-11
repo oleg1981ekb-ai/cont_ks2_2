@@ -17,13 +17,16 @@ def menu_edit_data(select_target_func):
         " 3. Изменить статусы\n"
         " 4. Удалить (месяц / подобъект / направление) с подтверждением\n"
         " 5. Изменить общую сумму договора (строка объекта)"
+        " 6. Добавить/удалить документы в конкретном месяце\n"
 
     )
-    sub_choice = input("Выберите действие (1-5) или 0 для Назад: ").strip()
+
+    sub_choice = input("Выберите действие (1-6) или 0 для Назад: ").strip()
     if sub_choice == "0":
         return
-    if sub_choice not in ("1", "2", "3", "4", "5"):
+    if sub_choice not in ("1", "2", "3", "4", "5", "6"):
         return
+
 
 
     # Общая точка выбора (direction/sub_obj). Для варианта 4 могут потребоваться дополнительные шаги выбора.
@@ -434,4 +437,57 @@ def menu_edit_data(select_target_func):
             db_core.save_db(db)
             wizard_git.register_action("direction_deleted")
             print(f" [УСПЕХ] Направление '{target_dir}' удалено.")
+
+    elif sub_choice == "6":
+        # Опциональные документы: добавить/удалить только для выбранного месяца
+        month_obj = db[target_dir][target_sub][target_mth]
+
+        extra_docs = month_obj.get("extra_docs", [])
+        if not isinstance(extra_docs, list):
+            extra_docs = []
+
+        # Новый список: только те документы, которые относятся к опциональным
+        optional_docs = [
+            d for d in config.DOCUMENTS_LIST
+            if d in ("Акт передачи оборудования", "Акт расхода давальческих материалов")
+        ]
+
+        print("\n[ДОКУМЕНТЫ МЕСЯЦА] Добавить/удалить дополнительные документы для: " + str(target_mth))
+        for i, d_name in enumerate(optional_docs, 1):
+            mark = " [ВКЛЮЧЕНО]" if d_name in extra_docs else " [ВЫКЛЮЧЕНО]"
+            print(f" {i}. {d_name}{mark}")
+
+        print("\n1) Добавить выбранный документ\n2) Удалить выбранный документ\n0) Назад")
+        op = input("Выберите режим (0-2): ").strip()
+        if op == "0":
+            return
+        if op not in ("1", "2"):
+            return
+
+        doc_choice = input(f"Введите номер документа (1-{len(optional_docs)}): ").strip()
+        if not doc_choice or not doc_choice.isdigit():
+            return
+        di = int(doc_choice) - 1
+        if di < 0 or di >= len(optional_docs):
+            return
+
+        chosen_doc = optional_docs[di]
+
+        if op == "1":
+            if chosen_doc not in extra_docs:
+                extra_docs.append(chosen_doc)
+        else:
+            if chosen_doc in extra_docs:
+                extra_docs.remove(chosen_doc)
+
+        month_obj["extra_docs"] = extra_docs
+        db["_meta"] = {
+            "last_changed_dir": target_dir,
+            "last_changed_sub": target_sub,
+            "is_new_change": True,
+        }
+        db_core.save_db(db)
+        wizard_git.register_action("extra_docs_changed")
+        print(" [УСПЕХ] Доп. документы месяца обновлены.")
+
 
