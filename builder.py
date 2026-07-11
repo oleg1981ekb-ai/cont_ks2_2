@@ -230,11 +230,67 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                         )
                         ws.row_dimensions[log_row].outline_level = 4
 
+    # ЭТАП 4: Автоматическая фиксация приемки документов (ГенДир)
+    # Условие: внутри одного месяца
+    #  - если в строках документов «Акт КС-2» и «Справка КС-3» в колонке F (ГенДир) стоит 1
+    #  - тогда в строке этого же месяца в колонке F проставляем сумму из колонки C.
+    # Важно: проверка делается строго по блокам одного месяца.
+    def _is_doc_row_for(name: str, cell_b_value):
+        if not cell_b_value:
+            return False
+        s = str(cell_b_value).strip()
+        return s == f"• {name}"
+
+    # Карта: для каждой строки месяца запоминаем строки документов (Акт КС-2/Справка КС-3)
+    month_row_to_docs = {}
+    current_month_row = None
+
+    for r in range(2, ws.max_row + 1):
+        b_val = ws.cell(row=r, column=2).value
+
+        # строка месяца имеет уровень outline_level=2 (по логике построения)
+        if ws.row_dimensions[r].outline_level == 2:
+            current_month_row = r
+            month_row_to_docs.setdefault(current_month_row, {})
+            continue
+
+        if current_month_row is None:
+            continue
+
+        # строки документов имеют префикс «• » в колонке B
+        if _is_doc_row_for("Акт КС-2", b_val):
+            month_row_to_docs[current_month_row]["Акт КС-2"] = r
+        elif _is_doc_row_for("Справка КС-3", b_val):
+            month_row_to_docs[current_month_row]["Справка КС-3"] = r
+
+    from openpyxl.styles import Font
+    for mrow, docs in month_row_to_docs.items():
+        d1 = docs.get("Акт КС-2")
+        d2 = docs.get("Справка КС-3")
+        if not d1 or not d2:
+            continue
+
+        # колонка F = индекс 6
+        gen_dir_col_idx = 6
+        try:
+            gen1 = ws.cell(row=d1, column=gen_dir_col_idx).value
+            gen2 = ws.cell(row=d2, column=gen_dir_col_idx).value
+        except Exception:
+            continue
+
+        if str(gen1).strip() == "1" and str(gen2).strip() == "1":
+            # Проставляем сумму из колонки C (индекс 3) в колонку F (ГенДир) строки месяца
+            sum_val = ws.cell(row=mrow, column=3).value
+            ws.cell(row=mrow, column=gen_dir_col_idx, value=sum_val)
+            ws.cell(row=mrow, column=gen_dir_col_idx).number_format = "#,##0.00"
+            ws.cell(row=mrow, column=gen_dir_col_idx).font = Font(name="Calibri", size=11, bold=True, color="000000")
+
     # Проставляем формулы статуса акта
     for row in range(2, ws.max_row + 1):
         cell_val = ws.cell(row=row, column=2).value
         if cell_val and not str(cell_val).startswith("•") and not str(cell_val).startswith(" "):
             ws.cell(row=row, column=10).value = f"=IF(C{row}>0, \"В работе\", \"\")"
+
 
     # УМНОЕ АВТОМАТИЧЕСКОЕ СВЕРТЫВАНИЕ СТРОК ДО УРОВНЯ МЕСЯЦЕВ
     ws.sheet_view.showOutlineSymbols = True
