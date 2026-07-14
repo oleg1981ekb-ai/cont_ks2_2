@@ -41,7 +41,9 @@ def menu_edit_data(select_target_func):
         return
 
     # === ВАРИАНТ 1: сумма месяца ===
-    months_in_db = list(db[target_dir][target_sub].keys())
+    # Внутри db[target_dir][target_sub] могут лежать служебные ключи (например contract_sum).
+    # Поэтому считаем «периодами» только реальные названия месяцев.
+    months_in_db = [m for m in db_core.ALL_YEAR_MONTHS if m in db[target_dir][target_sub]]
     print("\nТекущие активные периоды:")
     for idx, m in enumerate(months_in_db, 1):
         month_data = db[target_dir][target_sub].get(m, {})
@@ -316,12 +318,25 @@ def menu_edit_data(select_target_func):
                         }
                     }
 
-            doc_entry = db[target_dir][target_sub][target_mth].setdefault("status", {}).get(target_doc)
+            month_obj = db.get(target_dir, {}).get(target_sub, {}).get(target_mth)
+            if not isinstance(month_obj, dict):
+                print(f"\n ❌ [ОШИБКА] Период '{target_mth}' в базе поврежден (ожидался dict). Операция отменена.")
+                return
+
+            status_obj = month_obj.get("status", {})
+            if not isinstance(status_obj, dict):
+                status_obj = {}
+                month_obj["status"] = status_obj
+
+            doc_entry = status_obj.get(target_doc)
             if not isinstance(doc_entry, dict):
                 doc_entry = {}
-                db[target_dir][target_sub][target_mth].setdefault("status", {})[target_doc] = doc_entry
+                status_obj[target_doc] = doc_entry
 
             doc_entry[status_key] = {"value": status_value, "date": status_date}
+
+            db[target_dir][target_sub][target_mth] = month_obj
+
 
             db["_meta"] = {
                 "last_changed_dir": target_dir,
@@ -331,6 +346,64 @@ def menu_edit_data(select_target_func):
             db_core.save_db(db)
             wizard_git.register_action("status_changed")
             print(f" [УСПЕХ] Статус {status_key} документа '{target_doc}' успешно обновлен!")
+
+            # --- UX: после обновления статуса дать выбор продолжения ---
+            while True:
+                print("\nПосле обновления статуса: ")
+                print(" 1) Выбрать другой документ (для этого же status_key)")
+                print(" 2) Применить этот status_key ко ВСЕМ доступным документам")
+                print(" 0) Назад (шаг назад)")
+                print(" (Enter) Главное меню")
+
+                next_choice = input("Выберите действие: ").strip()
+                if next_choice == "":
+                    return
+                if next_choice == "0":
+                    return
+                if next_choice == "1":
+                    # возвращаемся в меню выбора документа
+                    break
+                if next_choice == "2":
+                    # Применяем ко всем доступным документам
+                    current_status = month_obj = db.get(target_dir, {}).get(target_sub, {}).get(target_mth, {})
+                    # если month_obj не dict — просто выходим
+                    if not isinstance(month_obj, dict):
+                        print(" ❌ [ОШИБКА] Период поврежден. Операция отменена.")
+                        return
+
+                    # В режиме “ко всем документам” просто вызываем применитель на всех allowed_docs
+                    # (в коде ранее это делается через apply_mode=="1", но нам здесь проще дублировать минимально)
+                    current_status_obj = month_obj.get("status", {})
+                    if not isinstance(current_status_obj, dict):
+                        current_status_obj = {}
+                    month_obj["status"] = current_status_obj
+
+                    for d_name in config.DOCUMENTS_LIST:
+                        mask = config.DOCUMENT_ROLES.get(d_name, {})
+                        if mask.get(status_key, 1) != 1:
+                            continue
+                        doc_entry = current_status_obj.get(d_name)
+                        if not isinstance(doc_entry, dict):
+                            doc_entry = {}
+                            current_status_obj[d_name] = doc_entry
+                        doc_entry[status_key] = {"value": status_value, "date": status_date}
+
+                    db[target_dir][target_sub][target_mth] = month_obj
+                    db["_meta"] = {
+                        "last_changed_dir": target_dir,
+                        "last_changed_sub": target_sub,
+                        "is_new_change": True,
+                    }
+                    db_core.save_db(db)
+                    wizard_git.register_action("status_changed")
+                    print(f" [УСПЕХ] Статус {status_key} применен ко ВСЕМ доступным документам!")
+                    return
+
+                print(" [ОШИБКА] Неверный выбор.")
+
+            # если выбрали “другой документ” — циклимся и заново просим выбор (через повторение блока apply_mode==2)
+
+
 
     elif sub_choice == "5":
         # === СУММА ДОГОВОРА: строка объекта (direction/sub_obj) ===
