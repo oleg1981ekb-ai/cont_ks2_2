@@ -393,8 +393,8 @@
             "Апрель": {
                 "sum": 118864745.91,
                 "status": {
-                    "value": "",
-                    "date": ""
+                    "value": 1,
+                    "date": "15.07"
                 }
             },
             "Июль": {
@@ -441,8 +441,8 @@
         }
     },
     "_meta": {
-        "last_changed_dir": "01_АНАПА (Таманская)",
-        "last_changed_sub": "02_1505_КН.",
+        "last_changed_dir": "03_КОРСАКОВ3_АНАПА",
+        "last_changed_sub": "01_НОМЕРНОЙ ФОНД",
         "is_new_change": false
     }
 }
