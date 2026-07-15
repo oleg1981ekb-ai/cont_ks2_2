@@ -159,7 +159,7 @@
                 ]
             },
             "Июль": {
-                "sum": 0,
+                "sum": 8193418.09,
                 "status": ""
             },
             "contract_sum": 8127287.5
@@ -403,7 +403,18 @@
                     "value": 3,
                     "date": "03.07"
                 }
-            }
+            },
+            "contract_sum": 647210765.88
+        },
+        "02_МОП_К3": {
+            "Июль": {
+                "sum": 0.0,
+                "status": {
+                    "value": "",
+                    "date": ""
+                }
+            },
+            "contract_sum": 158060515.51
         }
     },
     "04_КОРСАКОВ1": {
@@ -425,12 +436,13 @@
                     "value": "",
                     "date": ""
                 }
-            }
+            },
+            "contract_sum": 3422671.06
         }
     },
     "_meta": {
-        "last_changed_dir": "03_КОРСАКОВ3_АНАПА",
-        "last_changed_sub": "01_НОМЕРНОЙ ФОНД",
-        "is_new_change": true
+        "last_changed_dir": "01_АНАПА (Таманская)",
+        "last_changed_sub": "02_1505_КН.",
+        "is_new_change": false
     }
 }
