@@ -247,7 +247,11 @@ def menu_edit_data(select_target_func):
         if apply_mode == "1":
             current_status = db[target_dir][target_sub][target_mth].get("status", {})
             if isinstance(current_status, dict) and "value" in current_status:
-                db[target_dir][target_sub][target_mth]["status"] = {"value": status_value, "date": status_date}
+                db[target_dir][target_sub][target_mth]["status"] = {
+                    "value": status_value,
+                    "date": status_date,
+                    "col_key": status_key,
+                }
             else:
                 if not isinstance(current_status, dict):
                     current_status = {}

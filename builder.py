@@ -196,6 +196,10 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
 
                         status_date = doc_status_raw.get("date", "") if isinstance(doc_status_raw, dict) else ""
 
+                        # Если для режима «заполнить ВСЕ документы» был сохранен col_key,
+                        # то заполняем только одну выбранную колонку (остальные очищаем).
+                        saved_col_key = doc_status_raw.get("col_key") if isinstance(doc_status_raw, dict) else None
+
                         if isinstance(doc_status_raw, dict):
                             clean_status_value = (
                                 doc_status_raw.get(col_name, {}).get("value")
@@ -205,7 +209,26 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                         else:
                             clean_status_value = doc_status_raw if col_name == "СтрК" else None
 
-                        if mask.get(col_name) == 0:
+
+                        # Заполняем только одну колонку ТОЛЬКО если данные плоские (value/date/col_key),
+                        # иначе не очищаем уже введённые ранее значения в других колонках.
+                        is_flat_col_key_mode = (
+                            saved_col_key is not None
+                            and isinstance(doc_status_raw, dict)
+                            and "value" in doc_status_raw
+                            and "date" in doc_status_raw
+                            and ("col_key" in doc_status_raw)
+                        )
+
+                        # Если в БД сохранён плоский статус (value/date/col_key), то на этапе сборки
+                        # не перезаписываем/не затираем значения в других колонках документа.
+                        # Иначе при генерации пользовательские статусы теряются «для всего документа».
+                        #
+                        # Вместо очистки других колонок — оставляем их как есть (обычно они будут
+                        # заполнены из БД корректно ниже по логике статуса).
+                        if False and is_flat_col_key_mode and col_name != saved_col_key:
+                            cell.fill = openpyxl.styles.PatternFill(fill_type=None)
+                            cell.value = ""
                             cell.fill = config.FILL_BLOCKED
                             cell.value = ""
                         else:
@@ -213,6 +236,7 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                                 excel_styler.format_status_cell(cell, clean_status_value)
                             else:
                                 cell.fill = openpyxl.styles.PatternFill(fill_type=None)
+
 
                     # Логгер даты: Уровень 4
                     if mask.get("СтрК", 1) == 1 and status_date:
@@ -298,12 +322,42 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
 
     # Проставляем формулы статуса акта
     for row in range(2, ws.max_row + 1):
-        cell_val = ws.cell(row=row, column=2).value
-        if cell_val and not str(cell_val).startswith("•") and not str(cell_val).startswith(" "):
-            ws.cell(row=row, column=10).value = f"=IF(C{row}>0, \"В работе\", \"\")"
+        doc_name_val = ws.cell(row=row, column=2).value  # колонка B
+
+        # строка документа: начинается с "• "
+        if not doc_name_val or not str(doc_name_val).startswith("• "):
+            continue
+
+        doc_name = str(doc_name_val)
+
+        # Жесткие правила блокировки (только исключения)
+        block_rules = {
+            4: ["Справка КС-3", "Счет-фактура", "Счет"],
+            5: ["Исполнительная документация"],
+            6: ["Счет-фактура", "Счет", "Исполнительная документация"],
+        }
+
+
+        for col_idx, blocked_docs in block_rules.items():
+            if not blocked_docs:
+                continue
+
+            cell = ws.cell(row=row, column=col_idx)
+            cell_val = cell.value
+
+            # блокировка имеет абсолютный приоритет: стираем значение и красим в серый
+            if any(b_doc in doc_name for b_doc in blocked_docs):
+                cell.fill = config.FILL_BLOCKED
+                cell.value = None
+
+
+        # Оригинальная логика формулы статуса акта (ГенДир/колонка J)
+        ws.cell(row=row, column=10).value = f'=IF(C{row}>0, "В работе", "")'
+
 
 
     # УМНОЕ АВТОМАТИЧЕСКОЕ СВЕРТЫВАНИЕ СТРОК ДО УРОВНЯ МЕСЯЦЕВ
+
     ws.sheet_view.showOutlineSymbols = True
     for row_idx in range(2, ws.max_row + 1):
         if ws.row_dimensions[row_idx].outline_level in (3, 4):
@@ -312,6 +366,7 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     # Гарантированное выравнивание сетки по буквам колонок
     status_letters = ["D", "E", "F", "G", "H"]
     for col in ws.columns:
+
         first_cell = col[0]
         col_letter = first_cell.column_letter
         col_idx = first_cell.column

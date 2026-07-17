@@ -226,15 +226,26 @@ def menu_edit_data(select_target_func):
             if not isinstance(current_status, dict):
                 current_status = {}
 
+            # Если статус месяца был сохранен в «плоском» виде (ключ value/date/col_key напрямую в status),
+            # то при редактировании конкретной колонки нельзя перезаписывать всю матрицу документов,
+            # иначе затрутся остальные ранее введенные статусы.
+            # Поэтому: нормализуем плоский статус только в целевую колонку целевого документа.
             if "value" in current_status:
-                db[target_dir][target_sub][target_mth]["status"] = {}
-                for d_name in config.DOCUMENTS_LIST:
-                    db[target_dir][target_sub][target_mth]["status"][d_name] = {
-                        status_key: {
-                            "value": current_status.get("value", ""),
-                            "date": current_status.get("date", ""),
-                        }
-                    }
+                doc_entry = db[target_dir][target_sub][target_mth].setdefault("status", {}).get(target_doc)
+                if not isinstance(doc_entry, dict):
+                    doc_entry = {}
+                    db[target_dir][target_sub][target_mth].setdefault("status", {})[target_doc] = doc_entry
+                doc_entry[status_key] = {"value": status_value, "date": status_date}
+
+                db["_meta"] = {
+                    "last_changed_dir": target_dir,
+                    "last_changed_sub": target_sub,
+                    "is_new_change": True,
+                }
+                db_core.save_db(db)
+                wizard_git.register_action("status_changed")
+                print(f" [УСПЕХ] Статус {status_key} документа '{target_doc}' успешно обновлен!")
+                return
 
             doc_entry = db[target_dir][target_sub][target_mth].setdefault("status", {}).get(target_doc)
             if not isinstance(doc_entry, dict):
