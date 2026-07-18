@@ -335,6 +335,7 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
             4: ["Справка КС-3", "Счет-фактура", "Счет"],
             5: ["Исполнительная документация"],
             6: ["Счет-фактура", "Счет", "Исполнительная документация"],
+            8: ["Счет-фактура", "Счет"],
         }
 
 
@@ -342,11 +343,11 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
             if not blocked_docs:
                 continue
 
+            # блокировка имеет абсолютный приоритет: если документ совпадает
+            # — безусловно красим в серый и очищаем значение.
             cell = ws.cell(row=row, column=col_idx)
-            cell_val = cell.value
 
-            # блокировка имеет абсолютный приоритет: стираем значение и красим в серый
-            if any(b_doc in doc_name for b_doc in blocked_docs):
+            if any(doc.strip() == doc_name.replace("• ", "") for doc in blocked_docs):
                 cell.fill = config.FILL_BLOCKED
                 cell.value = None
 
