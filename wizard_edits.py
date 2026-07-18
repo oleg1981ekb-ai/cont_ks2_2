@@ -19,16 +19,20 @@ def menu_edit_data(select_target_func):
         " 5. Изменить общую сумму договора (строка объекта)\n"
 
         " 6. Добавить/удалить документы в конкретном месяце\n"
+        " 7. Добавить/изменить комментарий к оплате (вывод в Excel)\n"
 
     )
 
-    sub_choice = input("Выберите действие (1-6) или 0 для Назад: ").strip()
+    sub_choice = input("Выберите действие (1-7) или 0 для Назад: ").strip()
     if sub_choice == "0":
         return
-    if sub_choice not in ("1", "2", "3", "4", "5", "6"):
+    if sub_choice not in ("1", "2", "3", "4", "5", "6", "7"):
         return
 
-
+    if sub_choice == "7":
+        print("\n[РУЧНОЙ ТЕСТ] Вход в Пункт 7 выполнен успешно! Очередь интерфейса исправлена.")
+        input("\nНажмите Enter для возврата в меню...")
+        return
 
     # Общая точка выбора (direction/sub_obj). Для варианта 4 могут потребоваться дополнительные шаги выбора.
     target_dir, target_sub = select_target_func(db, allow_new=False)
@@ -414,7 +418,7 @@ def menu_edit_data(select_target_func):
         # Общая сумма договора хранится на уровне db[direction][sub_obj]
         current_contract_sum = db[target_dir][target_sub].get("contract_sum", 0.0)
         print(f"\nТекущая общая сумма договора для '{target_sub}': {db_core.fmt_money(current_contract_sum)} руб.")
-        
+
         while True:
             new_contract_sum_str = input("Введите общую сумму договора (руб.) (или '0' чтобы очистить): ").strip()
             if new_contract_sum_str.lower() == "выход":
