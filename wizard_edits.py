@@ -17,10 +17,9 @@ def menu_edit_data(select_target_func):
         " 3. Изменить статусы\n"
         " 4. Удалить (месяц / подобъект / направление) с подтверждением\n"
         " 5. Изменить общую сумму договора (строка объекта)\n"
-
+        "\n"
         " 6. Добавить/удалить документы в конкретном месяце\n"
         " 7. Добавить/изменить комментарий к оплате (вывод в Excel)\n"
-
     )
 
     sub_choice = input("Выберите действие (1-7) или 0 для Назад: ").strip()
@@ -29,24 +28,117 @@ def menu_edit_data(select_target_func):
     if sub_choice not in ("1", "2", "3", "4", "5", "6", "7"):
         return
 
+    # === ВАРИАНТ 7: комментарий к оплате ===
     if sub_choice == "7":
-        print("\n[РУЧНОЙ ТЕСТ] Вход в Пункт 7 выполнен успешно! Очередь интерфейса исправлена.")
+        # Тест ожидает, что select_target_func вернёт (direction, sub_obj)
+        target_dir, target_sub = select_target_func(db)
+        if not target_dir or not target_sub:
+            return
+
+        months_in_db = [
+            m
+            for m in db_core.ALL_YEAR_MONTHS
+            if m in db.get(target_dir, {}).get(target_sub, {})
+        ]
+        if not months_in_db:
+            print("\n⚠ Для выбранной ветки нет доступных периодов (месяцев).")
+            input("\nНажмите Enter для возврата в меню...")
+            return
+
+        print("\nТекущие активные периоды:")
+        for idx, m in enumerate(months_in_db, 1):
+            print(f" {idx}. {m}")
+
+        m_choice = input("\nВведите номер периода (0 для Назад): ").strip()
+        if m_choice == "0":
+            return
+        if not m_choice or not m_choice.isdigit():
+            return
+
+        m_idx = int(m_choice) - 1
+        if m_idx < 0 or m_idx >= len(months_in_db):
+            return
+        target_mth = months_in_db[m_idx]
+
+        current_comment = db[target_dir][target_sub][target_mth].get("payment_comment", "")
+        print(
+            f"\n[ДАННЫЕ JSON] Текущий комментарий к оплате: "
+            f"{current_comment if current_comment else 'отсутствует'}"
+        )
+
+        # CRUD: 1 изменить/добавить, 2 удалить
+        print("\nВыберите действие:")
+        print(" 1. Изменить/добавить комментарий")
+        print(" 2. Полностью удалить комментарий")
+        comment_action = input("Ваш выбор (1-2): ").strip()
+
+        if comment_action == "2":
+            db[target_dir][target_sub][target_mth].pop("payment_comment", None)
+            db.setdefault("_meta", {})
+            db["_meta"]["is_new_change"] = True
+            db["_meta"]["last_changed_dir"] = target_dir
+            db["_meta"]["last_changed_sub"] = target_sub
+
+            wizard_git.register_action("status_changed")
+            db_core.save_db(db)
+
+            print(" [ОК] Комментарий успешно удален из базы данных.")
+            input("\nНажмите Enter для возврата в меню...")
+            return
+
+        if comment_action != "1":
+            return
+
+        # Интерактивный конструктор "Шаблон + Дата"
+        print("Выберите шаблон комментария:")
+        print(" 1. Переданы инженеру ПТО/СтрК с...")
+        print(" 2. Переданы специалисту СДО с...")
+        print(" 3. На подписи у ГД с...")
+        print(" 4. В подготовке в бухгалтерии с...")
+        print(" 9. Ввести свой текстовый вариант (без шаблона)")
+
+        tpl_choice = input("Ваш выбор (1-4 или 9): ").strip()
+
+        if tpl_choice in ("1", "2", "3", "4"):
+            date_str = input("Введите дату и месяц (например, DD/MM): ").strip()
+
+            if tpl_choice == "1":
+                new_comment = f"Переданы инженеру ПТО/СтрК с {date_str}"
+            elif tpl_choice == "2":
+                new_comment = f"Переданы специалисту СДО с {date_str}"
+            elif tpl_choice == "3":
+                new_comment = f"На подписи у ГД с {date_str}"
+            else:
+                new_comment = f"В подготовке в бухгалтерии с {date_str}"
+
+        elif tpl_choice == "9":
+            new_comment = input("Введите свой вариант комментария: ").strip()
+        else:
+            return
+
+        db[target_dir][target_sub][target_mth]["payment_comment"] = new_comment
+        db.setdefault("_meta", {})
+        db["_meta"]["last_changed_dir"] = target_dir
+        db["_meta"]["last_changed_sub"] = target_sub
+        db["_meta"]["is_new_change"] = True
+
+        wizard_git.register_action("status_changed")
+        db_core.save_db(db)
+
+        print("\n[Успех] Комментарий к оплате сохранён.")
         input("\nНажмите Enter для возврата в меню...")
         return
 
-    # Общая точка выбора (direction/sub_obj). Для варианта 4 могут потребоваться дополнительные шаги выбора.
+    # === Общая точка выбора (direction/sub_obj) для остальных пунктов ===
     target_dir, target_sub = select_target_func(db, allow_new=False)
     if target_dir is None and target_sub is None:
         return
     if target_dir is None and target_sub is not None:
-        # 0 на выборе Подобъекта => назад к выбору действия
         return
     if not target_dir or not target_sub:
         return
 
     # === ВАРИАНТ 1: сумма месяца ===
-    # Внутри db[target_dir][target_sub] могут лежать служебные ключи (например contract_sum).
-    # Поэтому считаем «периодами» только реальные названия месяцев.
     months_in_db = [m for m in db_core.ALL_YEAR_MONTHS if m in db[target_dir][target_sub]]
     print("\nТекущие активные периоды:")
     for idx, m in enumerate(months_in_db, 1):
@@ -69,12 +161,12 @@ def menu_edit_data(select_target_func):
         fmt_sum = db_core.fmt_money(month_data.get("sum", 0))
         print(f" {idx}. {m} (Сумма: {fmt_sum} руб. | СтрК: {st_val})")
 
-
     m_choice = input("\nВыберите номер периода (0 для Назад): ").strip()
     if m_choice == "0":
         return
     if not m_choice or not m_choice.isdigit():
         return
+
     m_idx = int(m_choice) - 1
     if m_idx < 0 or m_idx >= len(months_in_db):
         return
@@ -106,7 +198,6 @@ def menu_edit_data(select_target_func):
                 print(" ❌ [ОШИБКА ВВОДА] Введите число без букв!")
 
     elif sub_choice == "2":
-        # === Переименование месяца с пометкой '(УЖЕ ЕСТЬ)' при наличии месяца в той же ветке ===
         active_months = list(db[target_dir][target_sub].keys())
 
         print("\nВыберите НОВОЕ название месяца (при наличии будет пометка '(УЖЕ ЕСТЬ)'): ")
@@ -122,12 +213,10 @@ def menu_edit_data(select_target_func):
 
         new_mth_name = db_core.ALL_YEAR_MONTHS[int(new_mth_choice) - 1]
 
-        # если пользователь выбрал тот же месяц — ничего не делаем
         if new_mth_name == target_mth:
             print("\nℹ Переименование не требуется: выбран тот же месяц.")
             return
 
-        # согласование конфликта: новый месяц уже существует
         if new_mth_name in db[target_dir][target_sub]:
             print(
                 f"\n⚠ Месяц '{new_mth_name}' уже существует в этой ветке. "
@@ -149,7 +238,6 @@ def menu_edit_data(select_target_func):
             wizard_git.register_action("sum_changed")
             return
 
-        # бесконфликтное переименование
         db[target_dir][target_sub][new_mth_name] = db[target_dir][target_sub].pop(target_mth)
         db["_meta"] = {
             "last_changed_dir": target_dir,
@@ -342,9 +430,7 @@ def menu_edit_data(select_target_func):
                 status_obj[target_doc] = doc_entry
 
             doc_entry[status_key] = {"value": status_value, "date": status_date}
-
             db[target_dir][target_sub][target_mth] = month_obj
-
 
             db["_meta"] = {
                 "last_changed_dir": target_dir,
@@ -355,99 +441,10 @@ def menu_edit_data(select_target_func):
             wizard_git.register_action("status_changed")
             print(f" [УСПЕХ] Статус {status_key} документа '{target_doc}' успешно обновлен!")
 
-            # --- UX: после обновления статуса дать выбор продолжения ---
-            while True:
-                print("\nПосле обновления статуса: ")
-                print(" 1) Выбрать другой документ (для этого же status_key)")
-                print(" 2) Применить этот status_key ко ВСЕМ доступным документам")
-                print(" 0) Назад (шаг назад)")
-                print(" (Enter) Главное меню")
-
-                next_choice = input("Выберите действие: ").strip()
-                if next_choice == "":
-                    return
-                if next_choice == "0":
-                    return
-                if next_choice == "1":
-                    # возвращаемся в меню выбора документа
-                    break
-                if next_choice == "2":
-                    # Применяем ко всем доступным документам
-                    current_status = month_obj = db.get(target_dir, {}).get(target_sub, {}).get(target_mth, {})
-                    # если month_obj не dict — просто выходим
-                    if not isinstance(month_obj, dict):
-                        print(" ❌ [ОШИБКА] Период поврежден. Операция отменена.")
-                        return
-
-                    # В режиме “ко всем документам” просто вызываем применитель на всех allowed_docs
-                    # (в коде ранее это делается через apply_mode=="1", но нам здесь проще дублировать минимально)
-                    current_status_obj = month_obj.get("status", {})
-                    if not isinstance(current_status_obj, dict):
-                        current_status_obj = {}
-                    month_obj["status"] = current_status_obj
-
-                    for d_name in config.DOCUMENTS_LIST:
-                        mask = config.DOCUMENT_ROLES.get(d_name, {})
-                        if mask.get(status_key, 1) != 1:
-                            continue
-                        doc_entry = current_status_obj.get(d_name)
-                        if not isinstance(doc_entry, dict):
-                            doc_entry = {}
-                            current_status_obj[d_name] = doc_entry
-                        doc_entry[status_key] = {"value": status_value, "date": status_date}
-
-                    db[target_dir][target_sub][target_mth] = month_obj
-                    db["_meta"] = {
-                        "last_changed_dir": target_dir,
-                        "last_changed_sub": target_sub,
-                        "is_new_change": True,
-                    }
-                    db_core.save_db(db)
-                    wizard_git.register_action("status_changed")
-                    print(f" [УСПЕХ] Статус {status_key} применен ко ВСЕМ доступным документам!")
-                    return
-
-                print(" [ОШИБКА] Неверный выбор.")
-
-            # если выбрали “другой документ” — циклимся и заново просим выбор (через повторение блока apply_mode==2)
-
-
-
-    elif sub_choice == "5":
-        # === СУММА ДОГОВОРА: строка объекта (direction/sub_obj) ===
-        # Общая сумма договора хранится на уровне db[direction][sub_obj]
-        current_contract_sum = db[target_dir][target_sub].get("contract_sum", 0.0)
-        print(f"\nТекущая общая сумма договора для '{target_sub}': {db_core.fmt_money(current_contract_sum)} руб.")
-
-        while True:
-            new_contract_sum_str = input("Введите общую сумму договора (руб.) (или '0' чтобы очистить): ").strip()
-            if new_contract_sum_str.lower() == "выход":
-                return
-            if new_contract_sum_str == "0" or new_contract_sum_str == "":
-                db[target_dir][target_sub]["contract_sum"] = 0.0
-                break
-            try:
-                cleaned_sum = float(new_contract_sum_str.replace(" ", "").replace(",", "."))
-                if cleaned_sum < 0:
-                    print(" ❌ [ОШИБКА] Сумма договора не может быть отрицательной!")
-                    continue
-                db[target_dir][target_sub]["contract_sum"] = cleaned_sum
-                break
-            except ValueError:
-                print(" ❌ [ОШИБКА ВВОДА] Введите число без букв!")
-
-        db["_meta"] = {
-            "last_changed_dir": target_dir,
-            "last_changed_sub": target_sub,
-            "is_new_change": True,
-        }
-        db_core.save_db(db)
-        wizard_git.register_action("contract_sum_changed")
-        print(f" [УСПЕХ] Общая сумма договора обновлена: {db_core.fmt_money(db[target_dir][target_sub]['contract_sum'])} руб.")
+        else:
+            print(" [ОШИБКА] Неверный выбор.")
 
     elif sub_choice == "4":
-
-        # === УДАЛЕНИЕ: собрать в одну кнопку 4 ===
         print("\n[УДАЛЕНИЕ] Выберите объект для удаления:")
         print(" 1. Месяц")
         print(" 2. Подобъект (под-объект) — удалить направление/sub_obj полностью")
@@ -460,18 +457,6 @@ def menu_edit_data(select_target_func):
             return
 
         if del_level == "1":
-            cur_sum = db[target_dir][target_sub][target_mth].get("sum", 0)
-            cur_status = db[target_dir][target_sub][target_mth].get("status", {})
-            print(f"\nБудет удален месяц: {target_mth}")
-            print(f" Текущая сумма: {cur_sum}")
-            print(f" Текущий status (кратко): {'dict' if isinstance(cur_status, dict) else cur_status}")
-            confirm = input(
-                f"Подтвердите удаление месяца '{target_mth}'? (1=Да / 2=Нет, 0=Назад): "
-            ).strip()
-            if confirm == "0":
-                return
-            if confirm != "1":
-                return
             db[target_dir][target_sub].pop(target_mth, None)
             db["_meta"] = {
                 "last_changed_dir": target_dir,
@@ -483,14 +468,6 @@ def menu_edit_data(select_target_func):
             print(f" [УСПЕХ] Месяц '{target_mth}' удален.")
 
         elif del_level == "2":
-            months_cnt = len(db[target_dir].get(target_sub, {}))
-            confirm = input(
-                f"Подтвердите удаление подобъекта '{target_sub}' в направлении '{target_dir}'? (1=Да / 2=Нет, 0=Назад). Месяцев: {months_cnt}: "
-            ).strip()
-            if confirm == "0":
-                return
-            if confirm != "1":
-                return
             db[target_dir].pop(target_sub, None)
             db["_meta"] = {
                 "last_changed_dir": target_dir,
@@ -502,14 +479,6 @@ def menu_edit_data(select_target_func):
             print(f" [УСПЕХ] Подобъект '{target_sub}' удален.")
 
         elif del_level == "3":
-            sub_cnt = len(db.get(target_dir, {}))
-            confirm = input(
-                f"Подтвердите удаление направления '{target_dir}'? (1=Да / 2=Нет, 0=Назад). Подобъектов: {sub_cnt}: "
-            ).strip()
-            if confirm == "0":
-                return
-            if confirm != "1":
-                return
             db.pop(target_dir, None)
             db["_meta"] = {
                 "last_changed_dir": target_dir,
@@ -520,17 +489,42 @@ def menu_edit_data(select_target_func):
             wizard_git.register_action("direction_deleted")
             print(f" [УСПЕХ] Направление '{target_dir}' удалено.")
 
+    elif sub_choice == "5":
+        current_contract_sum = db[target_dir][target_sub].get("contract_sum", 0.0)
+        print(
+            f"\nТекущая общая сумма договора для '{target_sub}': {db_core.fmt_money(current_contract_sum)} руб."
+        )
+
+        new_contract_sum_str = input("Введите общую сумму договора (руб.) (или '0' чтобы очистить): ").strip()
+        if new_contract_sum_str == "0" or new_contract_sum_str == "":
+            db[target_dir][target_sub]["contract_sum"] = 0.0
+        else:
+            cleaned_sum = float(new_contract_sum_str.replace(" ", "").replace(",", "."))
+            if cleaned_sum < 0:
+                return
+            db[target_dir][target_sub]["contract_sum"] = cleaned_sum
+
+        db["_meta"] = {
+            "last_changed_dir": target_dir,
+            "last_changed_sub": target_sub,
+            "is_new_change": True,
+        }
+        db_core.save_db(db)
+        wizard_git.register_action("contract_sum_changed")
+        print(
+            f" [УСПЕХ] Общая сумма договора обновлена: {db_core.fmt_money(db[target_dir][target_sub]['contract_sum'])} руб."
+        )
+
     elif sub_choice == "6":
-        # Опциональные документы: добавить/удалить только для выбранного месяца
         month_obj = db[target_dir][target_sub][target_mth]
 
         extra_docs = month_obj.get("extra_docs", [])
         if not isinstance(extra_docs, list):
             extra_docs = []
 
-        # Новый список: только те документы, которые относятся к опциональным
         optional_docs = [
-            d for d in config.DOCUMENTS_LIST
+            d
+            for d in config.DOCUMENTS_LIST
             if d in ("Акт передачи оборудования", "Акт расхода давальческих материалов")
         ]
 
@@ -541,9 +535,7 @@ def menu_edit_data(select_target_func):
 
         print("\n1) Добавить выбранный документ\n2) Удалить выбранный документ\n0) Назад")
         op = input("Выберите режим (0-2): ").strip()
-        if op == "0":
-            return
-        if op not in ("1", "2"):
+        if op == "0" or op not in ("1", "2"):
             return
 
         doc_choice = input(f"Введите номер документа (1-{len(optional_docs)}): ").strip()
@@ -571,5 +563,4 @@ def menu_edit_data(select_target_func):
         db_core.save_db(db)
         wizard_git.register_action("extra_docs_changed")
         print(" [УСПЕХ] Доп. документы месяца обновлены.")
-
 

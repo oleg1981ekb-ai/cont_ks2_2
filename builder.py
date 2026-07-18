@@ -1,7 +1,10 @@
+
 import logging
 logging.getLogger().setLevel(logging.WARNING)
 
 import openpyxl
+from openpyxl.comments import Comment
+
 import json
 import os
 import datetime
@@ -130,6 +133,13 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                     [row_counter, mth, float(mth_data.get("sum", 0.0)), "", "", "", "", "", "", ""]
                 )
                 current_row = ws.max_row
+
+                # Всплывающий комментарий к оплате (payment_comment) -> Comment к ячейке C
+                comment_text = mth_data.get("payment_comment", "")
+                if comment_text:
+                    cell_c = ws.cell(row=current_row, column=3)
+                    cell_c.comment = Comment(comment_text, "Система")
+
                 excel_styler.apply_row_style(
                     ws,
                     current_row,
