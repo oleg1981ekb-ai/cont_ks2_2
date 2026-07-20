@@ -136,7 +136,11 @@ def menu_add_record():
     if target_sub not in db[target_dir]:
         db[target_dir][target_sub] = {}
 
-    db[target_dir][target_sub][month] = {"sum": 0.0, "status": {"value": "", "date": ""}}
+    db[target_dir][target_sub][month] = {
+        "sum": 0.0,
+        "status": {"value": "", "date": ""},
+        "payment_comment": ""
+    }
     db_core.save_db(db)
     db_core.update_config_months(month)
     print(f" [УСПЕХ] Период '{month}' успешно добавлен в базу!")
