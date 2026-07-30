@@ -34,7 +34,7 @@ def load_db():
 def save_db(db):
     json_path = "database.json"
     with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(db, f, ensure_ascii=False, indent=4)
+        json.dump(db, f, ensure_ascii=False, indent=4, sort_keys=True)
 
 def update_config_months(new_month):
     """Автоматически добавляет новый месяц в config.py с сохранением хронологии."""

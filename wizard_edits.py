@@ -15,7 +15,7 @@ def menu_edit_data(select_target_func):
         " 1. Изменить сумму месяца\n"
         " 2. Переименовать месяц\n"
         " 3. Изменить статусы\n"
-        " 4. Удалить (месяц / подобъект / направление) с подтверждением\n"
+        " 4. Управление структурой (Переименование / Удаление)\n"
         " 5. Изменить общую сумму договора (строка объекта)\n"
         "\n"
         " 6. Добавить/удалить документы в конкретном месяце\n"
@@ -445,6 +445,31 @@ def menu_edit_data(select_target_func):
             print(" [ОШИБКА] Неверный выбор.")
 
     elif sub_choice == "4":
+        print("\n >> УПРАВЛЕНИЕ СТРУКТУРОЙ НАПРАВЛЕНИЯ")
+        print("  1. Переименовать Направление")
+        print("  2. Удалить Направление / Объект / Месяц")
+        print("  0. Назад")
+
+        struct_choice = input("\nВыберите действие (0-2): ").strip()
+        if struct_choice == "1":
+            action_rename_direction_core(db, select_target_func)
+            return
+        if struct_choice != "2":
+            return
+
+        print("\n >> УДАЛЕНИЕ ДАННЫХ")
+        target_dir, target_sub = select_target_func(db, allow_new=False)
+        if target_dir is None and target_sub is None:
+            return
+        if target_dir is None and target_sub is not None:
+            return
+        if not target_dir or not target_sub:
+            return
+
+        months_in_db = [m for m in db_core.ALL_YEAR_MONTHS if m in db[target_dir][target_sub]]
+        print("\nТекущие активные периоды:")
+        for idx, m in enumerate(months_in_db, 1):
+            print(f" {idx}. {m}")
         print("\n[УДАЛЕНИЕ] Выберите объект для удаления:")
         print(" 1. Месяц")
         print(" 2. Подобъект (под-объект) — удалить направление/sub_obj полностью")
@@ -457,6 +482,16 @@ def menu_edit_data(select_target_func):
             return
 
         if del_level == "1":
+            m_choice = input("\nВыберите номер периода (0 для Назад): ").strip()
+            if m_choice == "0":
+                return
+            if not m_choice or not m_choice.isdigit():
+                return
+            m_idx = int(m_choice) - 1
+            if m_idx < 0 or m_idx >= len(months_in_db):
+                return
+            target_mth = months_in_db[m_idx]
+
             db[target_dir][target_sub].pop(target_mth, None)
             db["_meta"] = {
                 "last_changed_dir": target_dir,
@@ -563,4 +598,33 @@ def menu_edit_data(select_target_func):
         db_core.save_db(db)
         wizard_git.register_action("extra_docs_changed")
         print(" [УСПЕХ] Доп. документы месяца обновлены.")
+
+
+def action_rename_direction_core(db, select_target_func):
+    print("\n >> ПЕРЕИМЕНОВАНИЕ НАПРАВЛЕНИЯ")
+    target_dir, _ = select_target_func(db, allow_new=False)
+    if not target_dir:
+        print(" Переименование отменено.")
+        return
+        
+    new_dir_name = input(f"Введите новое имя для направления '{target_dir}': ").strip()
+    if not new_dir_name or new_dir_name == target_dir:
+        print(" ❌ [ОШИБКА] Имя не может быть пустым или совпадать со старым!")
+        return
+        
+    if new_dir_name in db:
+        print(f" ❌ [ОШИБКА] Направление '{new_dir_name}' уже существует в базе!")
+        return
+        
+    db[new_dir_name] = db.pop(target_dir)
+    db["_meta"] = {
+        "last_changed_dir": new_dir_name,
+        "last_changed_sub": "",
+        "is_new_change": True
+    }
+    import db_core
+    import wizard_git
+    db_core.save_db(db)
+    wizard_git.register_action("status_changed")
+    print(f" [УСПЕХ] Направление переименовано в '{new_dir_name}'!")
 
