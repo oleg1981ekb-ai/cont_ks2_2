@@ -445,85 +445,87 @@ def menu_edit_data(select_target_func):
             print(" [ОШИБКА] Неверный выбор.")
 
     elif sub_choice == "4":
-        print("\n >> УПРАВЛЕНИЕ СТРУКТУРОЙ НАПРАВЛЕНИЯ")
-        print("  1. Переименовать Направление")
-        print("  2. Удалить Направление / Объект / Месяц")
-        print("  0. Назад")
+        while True:
+            print("\n >> УПРАВЛЕНИЕ СТРУКТУРОЙ НАПРАВЛЕНИЯ")
+            print("  1. Переименовать Направление")
+            print("  2. Удалить Направление / Объект / Месяц")
+            print("  0. Назад")
 
-        struct_choice = input("\nВыберите действие (0-2): ").strip()
-        if struct_choice == "1":
-            action_rename_direction_core(db, select_target_func)
-            return
-        if struct_choice != "2":
-            return
+            struct_choice = input("\nВыберите действие (0-2): ").strip()
+            if struct_choice == "1":
+                action_rename_direction_core(db, select_target_func)
+                continue
+            if struct_choice == "0":
+                break
+            if struct_choice != "2":
+                continue
 
-        print("\n >> УДАЛЕНИЕ ДАННЫХ")
-        target_dir, target_sub = select_target_func(db, allow_new=False)
-        if target_dir is None and target_sub is None:
-            return
-        if target_dir is None and target_sub is not None:
-            return
-        if not target_dir or not target_sub:
-            return
+            print("\n >> УДАЛЕНИЕ ДАННЫХ")
+            target_dir, target_sub = select_target_func(db, allow_new=False)
+            if target_dir is None and target_sub is None:
+                continue
+            if target_dir is None and target_sub is not None:
+                continue
+            if not target_dir or not target_sub:
+                continue
 
-        months_in_db = [m for m in db_core.ALL_YEAR_MONTHS if m in db[target_dir][target_sub]]
-        print("\nТекущие активные периоды:")
-        for idx, m in enumerate(months_in_db, 1):
-            print(f" {idx}. {m}")
-        print("\n[УДАЛЕНИЕ] Выберите объект для удаления:")
-        print(" 1. Месяц")
-        print(" 2. Подобъект (под-объект) — удалить направление/sub_obj полностью")
-        print(" 3. Направление — удалить direction полностью")
+            months_in_db = [m for m in db_core.ALL_YEAR_MONTHS if m in db[target_dir][target_sub]]
+            print("\nТекущие активные периоды:")
+            for idx, m in enumerate(months_in_db, 1):
+                print(f" {idx}. {m}")
+            print("\n[УДАЛЕНИЕ] Выберите объект для удаления:")
+            print(" 1. Месяц")
+            print(" 2. Подобъект (под-объект) — удалить направление/sub_obj полностью")
+            print(" 3. Направление — удалить direction полностью")
 
-        del_level = input("Выберите уровень (1-3) или 0 для Назад: ").strip()
-        if del_level == "0":
-            return
-        if del_level not in ("1", "2", "3"):
-            return
+            del_level = input("Выберите уровень (1-3) или 0 для Назад: ").strip()
+            if del_level == "0":
+                continue
+            if del_level not in ("1", "2", "3"):
+                continue
 
-        if del_level == "1":
-            m_choice = input("\nВыберите номер периода (0 для Назад): ").strip()
-            if m_choice == "0":
-                return
-            if not m_choice or not m_choice.isdigit():
-                return
-            m_idx = int(m_choice) - 1
-            if m_idx < 0 or m_idx >= len(months_in_db):
-                return
-            target_mth = months_in_db[m_idx]
+            if del_level == "1":
+                m_choice = input("\nВыберите номер периода (0 для Назад): ").strip()
+                if m_choice == "0":
+                    continue
+                if not m_choice or not m_choice.isdigit():
+                    continue
+                m_idx = int(m_choice) - 1
+                if m_idx < 0 or m_idx >= len(months_in_db):
+                    continue
+                target_mth = months_in_db[m_idx]
 
-            db[target_dir][target_sub].pop(target_mth, None)
-            db["_meta"] = {
-                "last_changed_dir": target_dir,
-                "last_changed_sub": target_sub,
-                "is_new_change": True,
-            }
-            db_core.save_db(db)
-            wizard_git.register_action("month_deleted")
-            print(f" [УСПЕХ] Месяц '{target_mth}' удален.")
+                db[target_dir][target_sub].pop(target_mth, None)
+                db["_meta"] = {
+                    "last_changed_dir": target_dir,
+                    "last_changed_sub": target_sub,
+                    "is_new_change": True,
+                }
+                db_core.save_db(db)
+                wizard_git.register_action("month_deleted")
+                print(f" [УСПЕХ] Месяц '{target_mth}' удален.")
 
-        elif del_level == "2":
-            db[target_dir].pop(target_sub, None)
-            db["_meta"] = {
-                "last_changed_dir": target_dir,
-                "last_changed_sub": target_sub,
-                "is_new_change": True,
-            }
-            db_core.save_db(db)
-            wizard_git.register_action("sub_object_deleted")
-            print(f" [УСПЕХ] Подобъект '{target_sub}' удален.")
+            elif del_level == "2":
+                db[target_dir].pop(target_sub, None)
+                db["_meta"] = {
+                    "last_changed_dir": target_dir,
+                    "last_changed_sub": target_sub,
+                    "is_new_change": True,
+                }
+                db_core.save_db(db)
+                wizard_git.register_action("sub_object_deleted")
+                print(f" [УСПЕХ] Подобъект '{target_sub}' удален.")
 
-        elif del_level == "3":
-            db.pop(target_dir, None)
-            db["_meta"] = {
-                "last_changed_dir": target_dir,
-                "last_changed_sub": target_sub,
-                "is_new_change": True,
-            }
-            db_core.save_db(db)
-            wizard_git.register_action("direction_deleted")
-            print(f" [УСПЕХ] Направление '{target_dir}' удалено.")
-
+            elif del_level == "3":
+                db.pop(target_dir, None)
+                db["_meta"] = {
+                    "last_changed_dir": target_dir,
+                    "last_changed_sub": target_sub,
+                    "is_new_change": True,
+                }
+                db_core.save_db(db)
+                wizard_git.register_action("direction_deleted")
+                print(f" [УСПЕХ] Направление '{target_dir}' удалено.")
     elif sub_choice == "5":
         current_contract_sum = db[target_dir][target_sub].get("contract_sum", 0.0)
         print(
