@@ -141,7 +141,7 @@ ROLES = {
 }
 
 
-VERSION = "v"
+VERSION = "v1.0.0"
 
 
 

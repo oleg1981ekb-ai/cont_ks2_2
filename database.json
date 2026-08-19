@@ -1128,11 +1128,56 @@
                 },
                 "sum": 0.0
             }
+        },
+        "03_ДОП_РАБОТЫ_СБОРКА": {
+            "contract_sum": 35000000.0,
+            "Сентябрь": {
+                "payment_comment": "",
+                "status": {
+                    "date": "",
+                    "value": ""
+                },
+                "sum": 0.0
+            }
+        },
+        "04_1_И_9_ЭТАЖИ_МОП": {
+            "contract_sum": 120000000.0,
+            "Октябрь": {
+                "payment_comment": "",
+                "status": {
+                    "date": "",
+                    "value": ""
+                },
+                "sum": 0.0
+            }
+        },
+        "05_ВОССТАНОВЛЕНИЕ_БЕТОНА": {
+            "contract_sum": 5440000.0,
+            "Сентябрь": {
+                "payment_comment": "",
+                "status": {
+                    "date": "",
+                    "value": ""
+                },
+                "sum": 0.0
+            }
         }
     },
     "04_КОРСАКОВ1": {
         "01_НОМЕРНОЙ ФОНД": {
+            "contract_sum": 381448000.0,
             "Июль": {
+                "status": {
+                    "date": "",
+                    "value": ""
+                },
+                "sum": 0.0
+            }
+        },
+        "02_ШОУРУМЫ_СБОРКА_РАЗБОКА": {
+            "contract_sum": 13298000.0,
+            "Сентябрь": {
+                "payment_comment": "",
                 "status": {
                     "date": "",
                     "value": ""
@@ -1192,7 +1237,7 @@
     },
     "_meta": {
         "is_new_change": false,
-        "last_changed_dir": "03_КОРСАКОВ3_АНАПА",
-        "last_changed_sub": "02_МОП_К3"
+        "last_changed_dir": "04_КОРСАКОВ1",
+        "last_changed_sub": "01_НОМЕРНОЙ ФОНД"
     }
 }
