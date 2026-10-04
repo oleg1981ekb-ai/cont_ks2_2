@@ -19,8 +19,8 @@ def apply_row_style(ws, row_idx, font, fill, border, alignment=None):
 
 
 def test_columns_width_logic():
-    columns_to_check = [4, 5, 6, 7, 8]  # D, E, F, G, H
-    letters = {4: "D", 5: "E", 6: "F", 7: "G", 8: "H"}
+    columns_to_check = [8, 9, 10, 11, 12]  # H, I, J, K, L
+    letters = {8: "H", 9: "I", 10: "J", 11: "K", 12: "L"}
     print(" Результаты симуляции openpyxl:")
     for col_idx in columns_to_check:
         width_val = 14.0
@@ -61,7 +61,7 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     for direction in db.keys():
         if direction == "_meta":
             continue
-        ws.append(["", str(direction), "", "", "", "", "", "", "", ""])
+        ws.append(["", str(direction), "", "", "", "", "", "", "", "", "", "", ""])
         excel_styler.apply_row_style(
             ws,
             ws.max_row,
@@ -73,7 +73,7 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
         ws.row_dimensions[ws.max_row].outline_level = 0
 
         for sub_obj in db[direction].keys():
-            ws.append(["", str(sub_obj), "", "", "", "", "", "", "", ""])
+            ws.append(["", str(sub_obj), "", "", "", "", "", "", "", "", "", "", ""])
             excel_styler.apply_row_style(
                 ws,
                 ws.max_row,
@@ -130,9 +130,20 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
 
                 # Месяц: Уровень 2
                 ws.append(
-                    [row_counter, mth, float(mth_data.get("sum", 0.0)), "", "", "", "", "", "", ""]
+                    [row_counter, mth, float(mth_data.get("sum", 0.0)), "", "", "", "", "", "", "", "", "", ""]
                 )
                 current_row = ws.max_row
+
+                # D Подписанные акты: формулу проставим позже (ЭТАП 4),
+                # когда известны строки документов КС-2/КС-3 этого месяца.
+                ws.cell(row=current_row, column=4).value = 0
+                ws.cell(row=current_row, column=4).number_format = "#,##0.00"
+                # F Остаток к выполнению = C Сумма - D Подписанные
+                ws.cell(row=current_row, column=6).value = f"=C{current_row}-D{current_row}"
+                ws.cell(row=current_row, column=6).number_format = "#,##0.00"
+                # G Дебиторская задолженность = D Подписанные - E Оплачено
+                ws.cell(row=current_row, column=7).value = f"=D{current_row}-E{current_row}"
+                ws.cell(row=current_row, column=7).number_format = "#,##0.00"
 
                 # Всплывающий комментарий к оплате (payment_comment) -> Comment к ячейке C
                 comment_text = mth_data.get("payment_comment", "")
@@ -171,7 +182,7 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                     if d_name in dynamic_extra_set and d_name not in extra_docs:
                         continue
 
-                    ws.append(["", f"• {d_name}", "", "", "", "", "", "", "", ""])
+                    ws.append(["", f"• {d_name}", "", "", "", "", "", "", "", "", "", "", ""])
 
                     doc_row = ws.max_row
                     excel_styler.apply_row_style(
@@ -262,6 +273,9 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                                 "",
                                 "",
                                 "",
+                                "",
+                                "",
+                                "",
                             ]
                         )
                         log_row = ws.max_row
@@ -275,10 +289,11 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                         )
                         ws.row_dimensions[log_row].outline_level = 4
 
-    # ЭТАП 4: Автоматическая фиксация приемки документов (ГенДир)
+    # ЭТАП 4: Автоматическая фиксация приемки документов (ГенДир) + Подписанные акты
     # Условие: внутри одного месяца
-    #  - если в строках документов «Акт КС-2» и «Справка КС-3» в колонке F (ГенДир) стоит 1
-    #  - тогда в строке этого же месяца в колонке F проставляем сумму из колонки C.
+    #  - если в строках документов «Акт КС-2» и «Справка КС-3» в колонке J (ГенДир) стоит 1
+    #  - тогда в строке этого же месяца в колонку J проставляем сумму из колонки C
+    #    и в колонку D (Подписанные акты) — формулу =IF(AND(J_ks2=1,J_ks3=1),C,0).
     # Важно: проверка делается строго по блокам одного месяца.
     def _is_doc_row_for(name: str, cell_b_value):
         if not cell_b_value:
@@ -315,16 +330,20 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
         if not d1 or not d2:
             continue
 
-        # колонка F = индекс 6
-        gen_dir_col_idx = 6
+        # колонка J = индекс 10
+        gen_dir_col_idx = 10
         try:
             gen1 = ws.cell(row=d1, column=gen_dir_col_idx).value
             gen2 = ws.cell(row=d2, column=gen_dir_col_idx).value
         except Exception:
             continue
 
+        # D Подписанные акты — живая формула от статусов ГенДир строк документов.
+        ws.cell(row=mrow, column=4).value = f"=IF(AND(J{d1}=1,J{d2}=1),C{mrow},0)"
+        ws.cell(row=mrow, column=4).number_format = "#,##0.00"
+
         if str(gen1).strip() == "1" and str(gen2).strip() == "1":
-            # Проставляем сумму из колонки C (индекс 3) в колонку F (ГенДир) строки месяца
+            # Проставляем сумму из колонки C (индекс 3) в колонку J (ГенДир) строки месяца
             sum_val = ws.cell(row=mrow, column=3).value
             ws.cell(row=mrow, column=gen_dir_col_idx, value=sum_val)
             ws.cell(row=mrow, column=gen_dir_col_idx).number_format = "#,##0.00"
@@ -341,11 +360,12 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
         doc_name = str(doc_name_val)
 
         # Жесткие правила блокировки (только исключения)
+        # Новая нумерация: H СтрК=8, I СДО=9, J ГенДир=10, L 1 экз.П=12
         block_rules = {
-            4: ["Справка КС-3", "Счет-фактура", "Счет"],
-            5: ["Исполнительная документация"],
-            6: ["Счет-фактура", "Счет", "Исполнительная документация"],
-            8: ["Счет-фактура", "Счет"],
+            8: ["Справка КС-3", "Счет-фактура", "Счет"],
+            9: ["Исполнительная документация"],
+            10: ["Счет-фактура", "Счет", "Исполнительная документация"],
+            12: ["Счет-фактура", "Счет"],
         }
 
 
@@ -362,8 +382,8 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                 cell.value = None
 
 
-        # Оригинальная логика формулы статуса акта (ГенДир/колонка J)
-        ws.cell(row=row, column=10).value = f'=IF(C{row}>0, "В работе", "")'
+        # Оригинальная логика формулы статуса акта (Текущий статус/M, колонка 13)
+        ws.cell(row=row, column=13).value = f'=IF(C{row}>0, "В работе", "")'
 
 
 
@@ -375,7 +395,7 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
             ws.row_dimensions[row_idx].hidden = True
 
     # Гарантированное выравнивание сетки по буквам колонок
-    status_letters = ["D", "E", "F", "G", "H"]
+    status_letters = ["H", "I", "J", "K", "L"]
     for col in ws.columns:
 
         first_cell = col[0]
