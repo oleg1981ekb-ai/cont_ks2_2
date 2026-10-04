@@ -8,10 +8,10 @@ def apply_conditional_formatting(ws):
     f_red = config.PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
     font_grn, font_ylw, font_red = Font(name="Calibri", size=11, color="006100"), Font(name="Calibri", size=11, color="9C6500"), Font(name="Calibri", size=11, color="9C0006")
     
-    # ДИАПАЗОН РАСШИРЕН ДО СТОЛБЦА I (теперь охватывает D, E, F, G, H, I)
-    ws.conditional_formatting.add("D2:I1000", CellIsRule(operator='equal', formula=['1'], fill=f_grn, font=font_grn))
-    ws.conditional_formatting.add("D2:I1000", CellIsRule(operator='equal', formula=['2'], fill=f_ylw, font=font_ylw))
-    ws.conditional_formatting.add("D2:I1000", CellIsRule(operator='equal', formula=['3'], fill=f_red, font=font_red))
+    # Статусы H..L (СтрК, СДО, ГенДир, 1 экз.З, 1 экз.П)
+    ws.conditional_formatting.add("H2:L1000", CellIsRule(operator='equal', formula=['1'], fill=f_grn, font=font_grn))
+    ws.conditional_formatting.add("H2:L1000", CellIsRule(operator='equal', formula=['2'], fill=f_ylw, font=font_ylw))
+    ws.conditional_formatting.add("H2:L1000", CellIsRule(operator='equal', formula=['3'], fill=f_red, font=font_red))
 
 def append_specifications(ws, current_row):
     current_row += 2
@@ -20,14 +20,16 @@ def append_specifications(ws, current_row):
     for score, text in specs:
         current_row += 1
         ws.cell(row=current_row, column=2, value=text).font = config.FONT_DATA
-        sc = ws.cell(row=current_row, column=4, value=score)
+        sc = ws.cell(row=current_row, column=8, value=score)
         sc.font, sc.alignment, sc.border = config.FONT_DATA, config.ALIGN_C, config.THIN_BORDER
     return current_row
 
 def set_column_widths(ws):
     ws.column_dimensions['A'].width, ws.column_dimensions['B'].width, ws.column_dimensions['C'].width = 8, 55, 16
-    ws.column_dimensions['D'].width = ws.column_dimensions['E'].width = ws.column_dimensions['F'].width = ws.column_dimensions['G'].width = ws.column_dimensions['H'].width = 7
-    # Столбец I (Опл.)
-    ws.column_dimensions['I'].width = 10
-    # Столбец J (Текущий статус акта)
-    ws.column_dimensions['J'].width = 40
+    # D Подписанные акты, E Оплачено, F Остаток, G Дебиторка
+    ws.column_dimensions['D'].width, ws.column_dimensions['E'].width = 16, 14
+    ws.column_dimensions['F'].width, ws.column_dimensions['G'].width = 16, 16
+    # H..L статусы
+    ws.column_dimensions['H'].width = ws.column_dimensions['I'].width = ws.column_dimensions['J'].width = ws.column_dimensions['K'].width = ws.column_dimensions['L'].width = 7
+    # Столбец M (Текущий статус акта)
+    ws.column_dimensions['M'].width = 40

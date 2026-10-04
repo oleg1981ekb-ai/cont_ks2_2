@@ -203,7 +203,7 @@ def main_menu():
             elif srv_choice == "3":
                 print("\n[ДИАГНОСТИКА ШИРИНЫ СТАТУСНЫХ КОЛОНОК]")
                 print("Целевой размер: 1.35 см -> Значение в builder.py/openpyxl: 14.0")
-                print("Проверяем диапазон колонок со статусами (D, E, F, G, H)...")
+                print("Проверяем диапазон колонок со статусами (H, I, J, K, L)...")
 
                 if hasattr(builder, "test_columns_width_logic"):
                     builder.test_columns_width_logic()

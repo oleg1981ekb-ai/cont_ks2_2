@@ -23,13 +23,14 @@ def load_historical_data(file_path):
             elif val_b in MONTHS_LIST: c_mth = val_b
             elif val_b.startswith("• "):
                 d_name = val_b.replace("• ", "").strip()
-                st_d = old_ws.cell(row=row, column=4).value
-                st_e = old_ws.cell(row=row, column=5).value
-                st_f = old_ws.cell(row=row, column=6).value
-                st_g = old_ws.cell(row=row, column=7).value
-                # Сохраняем все 4 статуса контроля
-                if any(st in (1, 2, 3) for st in (st_d, st_e, st_f, st_g)):
-                    saved_statuses[(c_dir, c_sub, c_mth, d_name)] = (st_d, st_e, st_f, st_g)
+                st_h = old_ws.cell(row=row, column=8).value
+                st_i = old_ws.cell(row=row, column=9).value
+                st_j = old_ws.cell(row=row, column=10).value
+                st_k = old_ws.cell(row=row, column=11).value
+                st_l = old_ws.cell(row=row, column=12).value
+                # Сохраняем все 5 статусов контроля (H..L)
+                if any(st in (1, 2, 3) for st in (st_h, st_i, st_j, st_k, st_l)):
+                    saved_statuses[(c_dir, c_sub, c_mth, d_name)] = (st_h, st_i, st_j, st_k, st_l)
                 if d_name == "Акт КС-2":
                     s_val = old_ws.cell(row=row, column=3).value
                     if s_val is not None: saved_sums[(c_dir, c_sub, c_mth)] = s_val
