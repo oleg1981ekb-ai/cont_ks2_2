@@ -24,6 +24,20 @@ def append_specifications(ws, current_row):
         sc.font, sc.alignment, sc.border = config.FONT_DATA, config.ALIGN_C, config.THIN_BORDER
     return current_row
 
+def apply_column_outline(ws):
+    """Группировка столбцов (outline) по Варианту 1 с F на подуровне.
+
+    Верхний уровень (1): D Подписанные, E Оплачено, G Дебиторка + H..L согласование.
+    Подуровень (2): F Остаток к выполнению — вложен в финансовый блок.
+    A,B,C,M — вне групп, всегда видны. По умолчанию всё раскрыто.
+    """
+    ws.sheet_properties.outlinePr.summaryRight = False
+    for letter in ("D", "E", "G", "H", "I", "J", "K", "L"):
+        ws.column_dimensions[letter].outlineLevel = 1
+        ws.column_dimensions[letter].hidden = False
+    ws.column_dimensions["F"].outlineLevel = 2
+    ws.column_dimensions["F"].hidden = False
+
 def set_column_widths(ws):
     ws.column_dimensions['A'].width, ws.column_dimensions['B'].width, ws.column_dimensions['C'].width = 8, 55, 16
     # D Подписанные акты, E Оплачено, F Остаток, G Дебиторка

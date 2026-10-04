@@ -31,6 +31,7 @@ def run():
     formatter.append_specifications(ws, last_row)
     formatter.apply_conditional_formatting(ws)
     formatter.set_column_widths(ws)
+    formatter.apply_column_outline(ws)
     
     # 5. Безопасное сохранение
     try:
