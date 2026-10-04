@@ -30,8 +30,10 @@ def run():
     last_row = builder.build_structure(ws, mock_data, saved_statuses, saved_sums)
     formatter.append_specifications(ws, last_row)
     formatter.apply_conditional_formatting(ws)
-    formatter.set_column_widths(ws)
+    # ВАЖНО: сначала outline (group сжимает <col> в диапазоны),
+    # затем ширины — иначе group() затрет индивидуальные ширины колонок.
     formatter.apply_column_outline(ws)
+    formatter.set_column_widths(ws)
     
     # 5. Безопасное сохранение
     try:
