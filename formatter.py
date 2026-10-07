@@ -24,6 +24,28 @@ def append_specifications(ws, current_row):
         sc.font, sc.alignment, sc.border = config.FONT_DATA, config.ALIGN_C, config.THIN_BORDER
     return current_row
 
+def apply_column_outline(ws):
+    """Группировка столбцов (outline) по Варианту 1.
+
+    Уровень 1: D Подписанные, E Оплачено, G Дебиторка (финансы).
+    Уровень 2: F Остаток к выполнению + H..L согласование (СтрК, СДО,
+    ГенДир, 1 экз. З., 1 экз. П.) — сворачиваются на втором клике.
+    A,B,C,M — вне групп, всегда видны. По умолчанию всё раскрыто.
+
+    openpyxl пишет <col> строго по одной колонке (min==max), иначе
+    вложенные уровни не видны в Excel/LibreOffice.
+    Поэтому выставляем outlineLevel индивидуально каждой колонке.
+    Вызывать ДО set_column_widths() — ширины только правят width
+    в существующем <col> и уровни не ломают.
+    """
+    ws.sheet_properties.outlinePr.summaryRight = False
+    for letter in ("D", "E", "G"):
+        ws.column_dimensions[letter].outlineLevel = 1
+        ws.column_dimensions[letter].hidden = False
+    for letter in ("F", "H", "I", "J", "K", "L"):
+        ws.column_dimensions[letter].outlineLevel = 2
+        ws.column_dimensions[letter].hidden = False
+
 def set_column_widths(ws):
     ws.column_dimensions['A'].width, ws.column_dimensions['B'].width, ws.column_dimensions['C'].width = 8, 55, 16
     # D Подписанные акты, E Оплачено, F Остаток, G Дебиторка

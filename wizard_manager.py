@@ -143,13 +143,27 @@ def main_menu():
         elif choice == "4":
             print("\n⚙ Запущена генерация Excel...")
             import openpyxl
+            import formatter
 
             wb = openpyxl.Workbook()
             ws = wb.active
             ws.title = "Реестр Актов"
 
             ws.sheet_view.showGridLines = True
-            builder.build_structure(ws)
+            ws.sheet_view.showOutlineSymbols = True
+            ws.sheet_properties.outlinePr.summaryBelow = False
+
+            # 3. Шапка (как в main.run)
+            ws.append(config.HEADERS)
+            ws.row_dimensions.height = 28
+            builder.apply_row_style(ws, 1, config.FONT_HDR, config.FILL_HDR, config.THIN_BORDER, config.ALIGN_C)
+
+            # 4. Построение и стилизация (единый путь с main.run)
+            last_row = builder.build_structure(ws)
+            formatter.append_specifications(ws, last_row)
+            formatter.apply_conditional_formatting(ws)
+            formatter.apply_column_outline(ws)
+            formatter.set_column_widths(ws)
 
             file_path = config.FULL_PATH if config.FULL_PATH else "Трекер_Акт_Выполнения.xlsx"
             try:

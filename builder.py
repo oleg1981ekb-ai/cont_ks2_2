@@ -31,6 +31,12 @@ def test_columns_width_logic():
 def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
     ws.freeze_panes = "A3"
     ws.sheet_properties.outlinePr.summaryBelow = False
+    # Группы строк уже есть (outline_level 0..4), включаем значки структуры.
+    # (Группы столбцов ставит formatter.apply_column_outline после build_structure.)
+    try:
+        ws.sheet_view.showOutlineSymbols = True
+    except Exception:
+        pass
 
     now_str = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
     ws.oddHeader.right.text = f"Выгружено: {now_str}"
