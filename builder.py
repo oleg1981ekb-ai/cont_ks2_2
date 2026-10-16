@@ -89,6 +89,7 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                 config.ALIGN_L,
             )
             ws.row_dimensions[ws.max_row].outline_level = 1
+            obj_row = ws.max_row
 
             # === ДОКУМЕНТЫ ПОДОБЪЕКТА (уровень 2, «братья» месяцев) ===
             sub_docs = db[direction][sub_obj].get("documents", [])
@@ -122,7 +123,6 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                         excel_styler.format_status_cell(cell, str(doc_status).strip())
 
             # Сумма договора (строка объекта) -> колонка C (индекс 3)
-            obj_row = ws.max_row
             contract_sum = ""
             try:
                 contract_sum = db[direction][sub_obj].get("contract_sum", "")
