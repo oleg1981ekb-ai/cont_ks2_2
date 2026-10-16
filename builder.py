@@ -4,6 +4,7 @@ logging.getLogger().setLevel(logging.WARNING)
 
 import openpyxl
 from openpyxl.comments import Comment
+from openpyxl.styles import Font
 
 import json
 import os
@@ -149,8 +150,31 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
             else:
                 ws.cell(row=obj_row, column=3).value = ""
 
+            # === ПЛАТЕЖИ ПОДОБЪЕКТА (колонка E "Оплачено") ===
+            payments = db[direction][sub_obj].get("payments", [])
+            if isinstance(payments, list) and len(payments) > 0:
+                # Формируем Excel-формулу: =13+12+14
+                formula_parts = []
+                for p in payments:
+                    if p is not None:
+                        try:
+                            val = float(p)
+                            formula_parts.append(str(int(val)) if val.is_integer() else str(val))
+                        except (ValueError, TypeError):
+                            pass
+                if formula_parts:
+                    formula = "=" + "+".join(formula_parts)
+                    cell_pay = ws.cell(row=obj_row, column=5, value=formula)
+                    cell_pay.number_format = "#,##0.00"
+                    cell_pay.font = Font(name="Calibri", size=11, bold=True, color="000000")
+                    cell_pay.border = config.THIN_BORDER
+                    cell_pay.alignment = config.ALIGN_R
+                else:
+                    ws.cell(row=obj_row, column=5, value="")
+            else:
+                ws.cell(row=obj_row, column=5, value="")
 
-            # Только настоящие месяцы из календаря — служебные ключи (documents, contract_sum) игнорируются
+# Только настоящие месяцы из календаря — служебные ключи (documents, contract_sum) игнорируются
             raw_keys = list(db[direction][sub_obj].keys())
             available_months = [m for m in db_core.ALL_YEAR_MONTHS if m in raw_keys]
 

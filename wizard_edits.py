@@ -21,12 +21,13 @@ def menu_edit_data(select_target_func):
         " 6. Добавить/удалить документы в конкретном месяце\n"
         " 7. Добавить/изменить комментарий к оплате (вывод в Excel)\n"
         " 8. Документы Подобъекта (уровень 2, братья месяцев)\n"
+        " 9. Платежи Подобъекта (ввод сумм, формула в Excel)\n"
     )
 
-    sub_choice = input("Выберите действие (1-8) или 0 для Назад: ").strip()
+    sub_choice = input("Выберите действие (1-9) или 0 для Назад: ").strip()
     if sub_choice == "0":
         return
-    if sub_choice not in ("1", "2", "3", "4", "5", "6", "7", "8"):
+    if sub_choice not in ("1", "2", "3", "4", "5", "6", "7", "8", "9"):
         return
 
     # === ВАРИАНТ 7: комментарий к оплате ===
@@ -227,6 +228,8 @@ def menu_edit_data(select_target_func):
 
             else:
                 print(" ❌ Неверный выбор.")
+
+    # === ВАРИАНТ 9: платежи Подобъекта (без выбора месяца) ===\n    if sub_choice == "9":\n        payments = db[target_dir][target_sub].setdefault("payments", [])\n        if not isinstance(payments, list):\n            payments = []\n            db[target_dir][target_sub]["payments"] = payments\n\n        while True:\n            print(f"\\n>>> ПЛАТЕЖИ ПОДОБЪЕКТА '{target_sub}'")\n            if not payments:\n                print("  Платежи не найдены.")\n            else:\n                total = sum(float(p) for p in payments if p is not None)\n                for idx, p in enumerate(payments, 1):\n                    print(f"  {idx}. {db_core.fmt_money(p)} руб.")\n                print(f"  Итого: {db_core.fmt_money(total)} руб.")\n\n            print("\\n 1. Добавить платёж")\n            print(" 2. Очистить все платежи")\n            print(" 0. Назад в главное меню изменений")\n            pay_choice = input("\\nВыберите действие (0-2): ").strip()\n\n            if pay_choice == "0":\n                return\n\n            elif pay_choice == "1":\n                pay_str = input("Введите сумму платежа (руб.): ").strip()\n                if not pay_str:\n                    print(" ❌ Сумма не может быть пустой.")\n                    continue\n                try:\n                    pay_val = float(pay_str.replace(" ", "").replace(",", "."))\n                    if pay_val < 0:\n                        print(" ❌ Сумма платежа не может быть отрицательной!")\n                        continue\n                except ValueError:\n                    print(" ❌ Введите число без букв!")\n                    continue\n\n                payments.append(pay_val)\n                db["_meta"] = {\n                    "last_changed_dir": target_dir,\n                    "last_changed_sub": target_sub,\n                    "is_new_change": True,\n                }\n                db_core.save_db(db)\n                wizard_git.register_action("status_changed")\n                print(f" [УСПЕХ] Платёж {db_core.fmt_money(pay_val)} руб. добавлен.")\n\n            elif pay_choice == "2":\n                if not payments:\n                    print(" Нет платежей для очистки.")\n                    continue\n                confirm = input(f"Удалить все платежи ({len(payments)} шт.)? (1=Да / 2=Нет): ").strip()\n                if confirm == "1":\n                    payments.clear()\n                    db["_meta"] = {\n                        "last_changed_dir": target_dir,\n                        "last_changed_sub": target_sub,\n                        "is_new_change": True,\n                    }\n                    db_core.save_db(db)\n                    wizard_git.register_action("status_changed")\n                    print(" [УСПЕХ] Все платежи удалены.")\n                else:\n                    print(" Отменено.")\n\n            else:\n                print(" ❌ Неверный выбор.")
 
     # === ВАРИАНТ 1: сумма месяца ===
     months_in_db = [m for m in db_core.ALL_YEAR_MONTHS if m in db[target_dir][target_sub]]
