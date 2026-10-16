@@ -90,6 +90,37 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
             )
             ws.row_dimensions[ws.max_row].outline_level = 1
 
+            # === ДОКУМЕНТЫ ПОДОБЪЕКТА (уровень 2, «братья» месяцев) ===
+            sub_docs = db[direction][sub_obj].get("documents", [])
+            if isinstance(sub_docs, list):
+                for doc in sub_docs:
+                    doc_name = str(doc.get("name", ""))
+                    doc_date = str(doc.get("date", ""))
+                    doc_status = doc.get("status", "")
+                    doc_comment = str(doc.get("comment", ""))
+
+                    display_name = f"  ▪ {doc_name}" + (f" ({doc_date})" if doc_date else "")
+                    if doc_comment:
+                        display_name += f" — {doc_comment}"
+
+                    ws.append(["", display_name, "", "", "", "", "", "", "", "", "", "", ""])
+                    doc_row = ws.max_row
+                    excel_styler.apply_row_style(
+                        ws,
+                        doc_row,
+                        config.FONT_SUB_OBJ_DOC,
+                        config.FILL_SUB_OBJ_DOC,
+                        config.THIN_BORDER,
+                        config.ALIGN_L,
+                    )
+                    ws.cell(row=doc_row, column=3).number_format = "#,##0.00"
+                    ws.row_dimensions[doc_row].outline_level = 2
+
+                    # Статус документа в колонке H (СтрК)
+                    if str(doc_status).strip() in ("1", "2", "3"):
+                        cell = ws.cell(row=doc_row, column=8)
+                        excel_styler.format_status_cell(cell, str(doc_status).strip())
+
             # Сумма договора (строка объекта) -> колонка C (индекс 3)
             obj_row = ws.max_row
             contract_sum = ""
@@ -119,12 +150,9 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
                 ws.cell(row=obj_row, column=3).value = ""
 
 
-            raw_months = list(db[direction][sub_obj].keys())
-            available_months = [m for m in db_core.ALL_YEAR_MONTHS if m in raw_months]
-
-            for m in raw_months:
-                if m not in available_months:
-                    available_months.append(m)
+            # Только настоящие месяцы из календаря — служебные ключи (documents, contract_sum) игнорируются
+            raw_keys = list(db[direction][sub_obj].keys())
+            available_months = [m for m in db_core.ALL_YEAR_MONTHS if m in raw_keys]
 
             for mth in available_months:
                 mth_data = db[direction][sub_obj][mth]

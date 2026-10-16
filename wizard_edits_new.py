@@ -15,10 +15,11 @@ def menu_edit_data(select_target_func):
         " 1. Изменить сумму месяца\n"
         " 2. Переименовать месяц\n"
         " 3. Изменить статусы\n"
-        " 4. Удалить (месяц / подобъект / направление) с подтверждением"
+        " 4. Удалить (месяц / podobъект / направление) с подтверждением\n"
+        " 5. Документы Подобъекта (братья месяцев)"
     )
-    sub_choice = input("Выберите действие (1-4): ").strip()
-    if sub_choice not in ("1", "2", "3", "4"):
+    sub_choice = input("Выберите действие (1-5): ").strip()
+    if sub_choice not in ("1", "2", "3", "4", "5"):
         return
 
     # Общая точка выбора (direction/sub_obj). Для варианта 4 могут потребоваться дополнительные шаги выбора.
@@ -330,3 +331,92 @@ def menu_edit_data(select_target_func):
             wizard_git.register_action("direction_deleted")
             print(f" [УСПЕХ] Направление '{target_dir}' удалено.")
 
+
+    elif sub_choice == "5":
+        # === ДОКУМЕНТЫ ПОДОБЪЕКТА (уровень 2, братья месяцев) ===
+        sub_docs = db[target_dir][target_sub].setdefault("documents", [])
+        if not isinstance(sub_docs, list):
+            sub_docs = []
+            db[target_dir][target_sub]["documents"] = sub_docs
+
+        while True:
+            print(f"\n>>> ДОКУМЕНТЫ ПОДОБЪЕКТА '{target_sub}' (уровень 2, братья месяцев)")
+            if not sub_docs:
+                print("  Документы не найдены.")
+            else:
+                for idx, doc in enumerate(sub_docs, 1):
+                    name = doc.get("name", "")
+                    date = doc.get("date", "")
+                    status = doc.get("status", "")
+                    comment = doc.get("comment", "")
+                    status_txt = f" [{'🟢' if status == 1 else '🟡' if status == 2 else '🔴' if status == 3 else '—'}]"
+                    date_txt = f" ({date})" if date else ""
+                    comment_txt = f" — {comment}" if comment else ""
+                    print(f"  {idx}. {name}{date_txt}{status_txt}{comment_txt}")
+
+            print("\n 1. Добавить документ")
+            print(" 2. Удалить документ по номеру")
+            print(" 0. Назад в главное меню изменений")
+            doc_choice = input("\nВыберите действие (0-2): ").strip()
+
+            if doc_choice == "0":
+                break
+
+            elif doc_choice == "1":
+                name = input("Введите название документа: ").strip()
+                if not name:
+                    print(" ❌ Название не может быть пустым.")
+                    continue
+                date = input("Введите дату (ДД.ММ, optional): ").strip()
+                print("Статус: 1. Зеленый | 2. Желтый | 3. Красный | 0. Без статуса")
+                st = input("Выберите статус (0-3): ").strip()
+                status_val = ""
+                if st == "1":
+                    status_val = 1
+                elif st == "2":
+                    status_val = 2
+                elif st == "3":
+                    status_val = 3
+                elif st not in ("0", ""):
+                    print(" ❌ Неверный статус, будет установлен без статуса.")
+                comment = input("Комментарий (optional): ").strip()
+
+                sub_docs.append({
+                    "name": name,
+                    "date": date,
+                    "status": status_val,
+                    "comment": comment,
+                })
+                db["_meta"] = {
+                    "last_changed_dir": target_dir,
+                    "last_changed_sub": target_sub,
+                    "is_new_change": True,
+                }
+                db_core.save_db(db)
+                wizard_git.register_action("status_changed")
+                print(f" [УСПЕХ] Документ '{name}' добавлен.")
+
+            elif doc_choice == "2":
+                if not sub_docs:
+                    print(" Нет документов для удаления.")
+                    continue
+                num = input("Введите номер документа для удаления: ").strip()
+                if not num.isdigit():
+                    print(" ❌ Введите число.")
+                    continue
+                idx = int(num) - 1
+                if idx < 0 or idx >= len(sub_docs):
+                    print(" ❌ Неверный номер.")
+                    continue
+                removed = sub_docs.pop(idx)
+                db["_meta"] = {
+                    "last_changed_dir": target_dir,
+                    "last_changed_sub": target_sub,
+                    "is_new_change": True,
+                }
+                db_core.save_db(db)
+                wizard_git.register_action("status_changed")
+                print(f" [УСПЕХ] Документ '{removed.get('name', '')}' удален.")
+
+            else:
+                print(" ❌ Неверный выбор.")

@@ -148,6 +148,10 @@ VERSION = "v1.0.0"
 
 
 
+# === Стили для документов Подобъекта (уровень 2, «братья» месяцев) ===
+FONT_SUB_OBJ_DOC = Font(name="Calibri", size=10, italic=True, color="2E5E8C")
+FILL_SUB_OBJ_DOC = PatternFill(start_color="EAF1F8", end_color="EAF1F8", fill_type="solid")
+
 # Дополнительные цвета для автоматической покраски статусов СтрК
 FILL_GREEN = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
 FILL_YELLOW = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
