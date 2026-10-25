@@ -1,6 +1,7 @@
 import db_core
 import config
 import wizard_git
+import wizard_common
 
 
 def menu_edit_data(select_target_func):
@@ -32,103 +33,11 @@ def menu_edit_data(select_target_func):
 
     # === ВАРИАНТ 7: комментарий к оплате ===
     if sub_choice == "7":
-        # Тест ожидает, что select_target_func вернёт (direction, sub_obj)
         target_dir, target_sub = select_target_func(db)
         if not target_dir or not target_sub:
             return
 
-        months_in_db = [
-            m
-            for m in db_core.ALL_YEAR_MONTHS
-            if m in db.get(target_dir, {}).get(target_sub, {})
-        ]
-        if not months_in_db:
-            print("\n⚠ Для выбранной ветки нет доступных периодов (месяцев).")
-            input("\nНажмите Enter для возврата в меню...")
-            return
-
-        print("\nТекущие активные периоды:")
-        for idx, m in enumerate(months_in_db, 1):
-            print(f" {idx}. {m}")
-
-        m_choice = input("\nВведите номер периода (0 для Назад): ").strip()
-        if m_choice == "0":
-            return
-        if not m_choice or not m_choice.isdigit():
-            return
-
-        m_idx = int(m_choice) - 1
-        if m_idx < 0 or m_idx >= len(months_in_db):
-            return
-        target_mth = months_in_db[m_idx]
-
-        current_comment = db[target_dir][target_sub][target_mth].get("payment_comment", "")
-        print(
-            f"\n[ДАННЫЕ JSON] Текущий комментарий к оплате: "
-            f"{current_comment if current_comment else 'отсутствует'}"
-        )
-
-        # CRUD: 1 изменить/добавить, 2 удалить
-        print("\nВыберите действие:")
-        print(" 1. Изменить/добавить комментарий")
-        print(" 2. Полностью удалить комментарий")
-        comment_action = input("Ваш выбор (1-2): ").strip()
-
-        if comment_action == "2":
-            db[target_dir][target_sub][target_mth].pop("payment_comment", None)
-            db.setdefault("_meta", {})
-            db["_meta"]["is_new_change"] = True
-            db["_meta"]["last_changed_dir"] = target_dir
-            db["_meta"]["last_changed_sub"] = target_sub
-
-            wizard_git.register_action("status_changed")
-            db_core.save_db(db)
-
-            print(" [ОК] Комментарий успешно удален из базы данных.")
-            input("\nНажмите Enter для возврата в меню...")
-            return
-
-        if comment_action != "1":
-            return
-
-        # Интерактивный конструктор "Шаблон + Дата"
-        print("Выберите шаблон комментария:")
-        print(" 1. Переданы инженеру ПТО/СтрК с...")
-        print(" 2. Переданы специалисту СДО с...")
-        print(" 3. На подписи у ГД с...")
-        print(" 4. В подготовке в бухгалтерии с...")
-        print(" 9. Ввести свой текстовый вариант (без шаблона)")
-
-        tpl_choice = input("Ваш выбор (1-4 или 9): ").strip()
-
-        if tpl_choice in ("1", "2", "3", "4"):
-            date_str = input("Введите дату и месяц (например, DD/MM): ").strip()
-
-            if tpl_choice == "1":
-                new_comment = f"Переданы инженеру ПТО/СтрК с {date_str}"
-            elif tpl_choice == "2":
-                new_comment = f"Переданы специалисту СДО с {date_str}"
-            elif tpl_choice == "3":
-                new_comment = f"На подписи у ГД с {date_str}"
-            else:
-                new_comment = f"В подготовке в бухгалтерии с {date_str}"
-
-        elif tpl_choice == "9":
-            new_comment = input("Введите свой вариант комментария: ").strip()
-        else:
-            return
-
-        db[target_dir][target_sub][target_mth]["payment_comment"] = new_comment
-        db.setdefault("_meta", {})
-        db["_meta"]["last_changed_dir"] = target_dir
-        db["_meta"]["last_changed_sub"] = target_sub
-        db["_meta"]["is_new_change"] = True
-
-        wizard_git.register_action("status_changed")
-        db_core.save_db(db)
-
-        print("\n[Успех] Комментарий к оплате сохранён.")
-        input("\nНажмите Enter для возврата в меню...")
+        wizard_common.manage_payment_comment(db, target_dir, target_sub)
         return
 
     # === Общая точка выбора (direction/sub_obj) для остальных пунктов ===
@@ -142,94 +51,13 @@ def menu_edit_data(select_target_func):
 
     # === ВАРИАНТ 8: документы Подобъекта (без выбора месяца) ===
     if sub_choice == "8":
-        sub_docs = db[target_dir][target_sub].setdefault("documents", [])
-        if not isinstance(sub_docs, list):
-            sub_docs = []
-            db[target_dir][target_sub]["documents"] = sub_docs
+        wizard_common.manage_sub_docs(db, target_dir, target_sub)
+        return
 
-        while True:
-            print(f"\n>>> ДОКУМЕНТЫ ПОДОБЪЕКТА '{target_sub}' (уровень 2, братья месяцев)")
-            if not sub_docs:
-                print("  Документы не найдены.")
-            else:
-                for idx, doc in enumerate(sub_docs, 1):
-                    name = doc.get("name", "")
-                    date = doc.get("date", "")
-                    status = doc.get("status", "")
-                    comment = doc.get("comment", "")
-                    status_txt = f" [{'🟢' if status == 1 else '🟡' if status == 2 else '🔴' if status == 3 else '—'}]"
-                    date_txt = f" ({date})" if date else ""
-                    comment_txt = f" — {comment}" if comment else ""
-                    print(f"  {idx}. {name}{date_txt}{status_txt}{comment_txt}")
-
-            print("\n 1. Добавить документ")
-            print(" 2. Удалить документ по номеру")
-            print(" 0. Назад в главное меню изменений")
-            doc_choice = input("\nВыберите действие (0-2): ").strip()
-
-            if doc_choice == "0":
-                return
-
-            elif doc_choice == "1":
-                name = input("Введите название документа: ").strip()
-                if not name:
-                    print(" ❌ Название не может быть пустым.")
-                    continue
-                date = input("Введите дату (ДД.ММ, optional): ").strip()
-                print("Статус: 1. Зеленый | 2. Желтый | 3. Красный | 0. Без статуса")
-                st = input("Выберите статус (0-3): ").strip()
-                status_val = ""
-                if st == "1":
-                    status_val = 1
-                elif st == "2":
-                    status_val = 2
-                elif st == "3":
-                    status_val = 3
-                elif st not in ("0", ""):
-                    print(" ❌ Неверный статус, будет установлен без статуса.")
-                comment = input("Комментарий (optional): ").strip()
-
-                sub_docs.append({
-                    "name": name,
-                    "date": date,
-                    "status": status_val,
-                    "comment": comment,
-                })
-                db["_meta"] = {
-                    "last_changed_dir": target_dir,
-                    "last_changed_sub": target_sub,
-                    "is_new_change": True,
-                }
-                db_core.save_db(db)
-                wizard_git.register_action("status_changed")
-                print(f" [УСПЕХ] Документ '{name}' добавлен.")
-
-            elif doc_choice == "2":
-                if not sub_docs:
-                    print(" Нет документов для удаления.")
-                    continue
-                num = input("Введите номер документа для удаления: ").strip()
-                if not num.isdigit():
-                    print(" ❌ Введите число.")
-                    continue
-                idx = int(num) - 1
-                if idx < 0 or idx >= len(sub_docs):
-                    print(" ❌ Неверный номер.")
-                    continue
-                removed = sub_docs.pop(idx)
-                db["_meta"] = {
-                    "last_changed_dir": target_dir,
-                    "last_changed_sub": target_sub,
-                    "is_new_change": True,
-                }
-                db_core.save_db(db)
-                wizard_git.register_action("status_changed")
-                print(f" [УСПЕХ] Документ '{removed.get('name', '')}' удален.")
-
-            else:
-                print(" ❌ Неверный выбор.")
-
-    # === ВАРИАНТ 9: платежи Подобъекта (без выбора месяца) ===\n    if sub_choice == "9":\n        payments = db[target_dir][target_sub].setdefault("payments", [])\n        if not isinstance(payments, list):\n            payments = []\n            db[target_dir][target_sub]["payments"] = payments\n\n        while True:\n            print(f"\\n>>> ПЛАТЕЖИ ПОДОБЪЕКТА '{target_sub}'")\n            if not payments:\n                print("  Платежи не найдены.")\n            else:\n                total = sum(float(p) for p in payments if p is not None)\n                for idx, p in enumerate(payments, 1):\n                    print(f"  {idx}. {db_core.fmt_money(p)} руб.")\n                print(f"  Итого: {db_core.fmt_money(total)} руб.")\n\n            print("\\n 1. Добавить платёж")\n            print(" 2. Очистить все платежи")\n            print(" 0. Назад в главное меню изменений")\n            pay_choice = input("\\nВыберите действие (0-2): ").strip()\n\n            if pay_choice == "0":\n                return\n\n            elif pay_choice == "1":\n                pay_str = input("Введите сумму платежа (руб.): ").strip()\n                if not pay_str:\n                    print(" ❌ Сумма не может быть пустой.")\n                    continue\n                try:\n                    pay_val = float(pay_str.replace(" ", "").replace(",", "."))\n                    if pay_val < 0:\n                        print(" ❌ Сумма платежа не может быть отрицательной!")\n                        continue\n                except ValueError:\n                    print(" ❌ Введите число без букв!")\n                    continue\n\n                payments.append(pay_val)\n                db["_meta"] = {\n                    "last_changed_dir": target_dir,\n                    "last_changed_sub": target_sub,\n                    "is_new_change": True,\n                }\n                db_core.save_db(db)\n                wizard_git.register_action("status_changed")\n                print(f" [УСПЕХ] Платёж {db_core.fmt_money(pay_val)} руб. добавлен.")\n\n            elif pay_choice == "2":\n                if not payments:\n                    print(" Нет платежей для очистки.")\n                    continue\n                confirm = input(f"Удалить все платежи ({len(payments)} шт.)? (1=Да / 2=Нет): ").strip()\n                if confirm == "1":\n                    payments.clear()\n                    db["_meta"] = {\n                        "last_changed_dir": target_dir,\n                        "last_changed_sub": target_sub,\n                        "is_new_change": True,\n                    }\n                    db_core.save_db(db)\n                    wizard_git.register_action("status_changed")\n                    print(" [УСПЕХ] Все платежи удалены.")\n                else:\n                    print(" Отменено.")\n\n            else:\n                print(" ❌ Неверный выбор.")
+    # === ВАРИАНТ 9: платежи Подобъекта (без выбора месяца) ===
+    if sub_choice == "9":
+        wizard_common.manage_payments(db, target_dir, target_sub)
+        return
 
     # === ВАРИАНТ 1: сумма месяца ===
     months_in_db = [m for m in db_core.ALL_YEAR_MONTHS if m in db[target_dir][target_sub]]
@@ -538,112 +366,11 @@ def menu_edit_data(select_target_func):
             print(" [ОШИБКА] Неверный выбор.")
 
     elif sub_choice == "4":
-        while True:
-            print("\n >> УПРАВЛЕНИЕ СТРУКТУРОЙ НАПРАВЛЕНИЯ")
-            print("  1. Переименовать Направление")
-            print("  2. Удалить Направление / Объект / Месяц")
-            print("  0. Назад")
-
-            struct_choice = input("\nВыберите действие (0-2): ").strip()
-            if struct_choice == "1":
-                action_rename_direction_core(db, select_target_func)
-                continue
-            if struct_choice == "0":
-                break
-            if struct_choice != "2":
-                continue
-
-            print("\n >> УДАЛЕНИЕ ДАННЫХ")
-            target_dir, target_sub = select_target_func(db, allow_new=False)
-            if target_dir is None and target_sub is None:
-                continue
-            if target_dir is None and target_sub is not None:
-                continue
-            if not target_dir or not target_sub:
-                continue
-
-            months_in_db = [m for m in db_core.ALL_YEAR_MONTHS if m in db[target_dir][target_sub]]
-            print("\nТекущие активные периоды:")
-            for idx, m in enumerate(months_in_db, 1):
-                print(f" {idx}. {m}")
-            print("\n[УДАЛЕНИЕ] Выберите объект для удаления:")
-            print(" 1. Месяц")
-            print(" 2. Подобъект (под-объект) — удалить направление/sub_obj полностью")
-            print(" 3. Направление — удалить direction полностью")
-
-            del_level = input("Выберите уровень (1-3) или 0 для Назад: ").strip()
-            if del_level == "0":
-                continue
-            if del_level not in ("1", "2", "3"):
-                continue
-
-            if del_level == "1":
-                m_choice = input("\nВыберите номер периода (0 для Назад): ").strip()
-                if m_choice == "0":
-                    continue
-                if not m_choice or not m_choice.isdigit():
-                    continue
-                m_idx = int(m_choice) - 1
-                if m_idx < 0 or m_idx >= len(months_in_db):
-                    continue
-                target_mth = months_in_db[m_idx]
-
-                db[target_dir][target_sub].pop(target_mth, None)
-                db["_meta"] = {
-                    "last_changed_dir": target_dir,
-                    "last_changed_sub": target_sub,
-                    "is_new_change": True,
-                }
-                db_core.save_db(db)
-                wizard_git.register_action("month_deleted")
-                print(f" [УСПЕХ] Месяц '{target_mth}' удален.")
-
-            elif del_level == "2":
-                db[target_dir].pop(target_sub, None)
-                db["_meta"] = {
-                    "last_changed_dir": target_dir,
-                    "last_changed_sub": target_sub,
-                    "is_new_change": True,
-                }
-                db_core.save_db(db)
-                wizard_git.register_action("sub_object_deleted")
-                print(f" [УСПЕХ] Подобъект '{target_sub}' удален.")
-
-            elif del_level == "3":
-                db.pop(target_dir, None)
-                db["_meta"] = {
-                    "last_changed_dir": target_dir,
-                    "last_changed_sub": target_sub,
-                    "is_new_change": True,
-                }
-                db_core.save_db(db)
-                wizard_git.register_action("direction_deleted")
-                print(f" [УСПЕХ] Направление '{target_dir}' удалено.")
+        wizard_common.delete_structure_simple(db, target_dir, target_sub)
+        return
     elif sub_choice == "5":
-        current_contract_sum = db[target_dir][target_sub].get("contract_sum", 0.0)
-        print(
-            f"\nТекущая общая сумма договора для '{target_sub}': {db_core.fmt_money(current_contract_sum)} руб."
-        )
-
-        new_contract_sum_str = input("Введите общую сумму договора (руб.) (или '0' чтобы очистить): ").strip()
-        if new_contract_sum_str == "0" or new_contract_sum_str == "":
-            db[target_dir][target_sub]["contract_sum"] = 0.0
-        else:
-            cleaned_sum = float(new_contract_sum_str.replace(" ", "").replace(",", "."))
-            if cleaned_sum < 0:
-                return
-            db[target_dir][target_sub]["contract_sum"] = cleaned_sum
-
-        db["_meta"] = {
-            "last_changed_dir": target_dir,
-            "last_changed_sub": target_sub,
-            "is_new_change": True,
-        }
-        db_core.save_db(db)
-        wizard_git.register_action("contract_sum_changed")
-        print(
-            f" [УСПЕХ] Общая сумма договора обновлена: {db_core.fmt_money(db[target_dir][target_sub]['contract_sum'])} руб."
-        )
+        wizard_common.edit_contract_sum(db, target_dir, target_sub)
+        return
 
     elif sub_choice == "6":
         month_obj = db[target_dir][target_sub][target_mth]

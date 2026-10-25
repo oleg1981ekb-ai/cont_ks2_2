@@ -1,4 +1,11 @@
 {
+    "_changelog": {
+        "feature/dynamic-extra-documents": {
+            "status": "processed_and_deleted",
+            "date": "2026-10-25",
+            "description": "Ветка отработана и удалена. Все изменения (новые колонки D/G, extra_docs, маски DOCUMENT_ROLES, пункт меню 6) влиты в main и закоммичены (826cb4d)."
+        }
+    },
     "01_271_КН||└─ Дата изменения СтрК: 02.07||Июль": {
         "direction": "01_271_КН",
         "sub_obj": "└─ Дата изменения СтрК: 02.07",
