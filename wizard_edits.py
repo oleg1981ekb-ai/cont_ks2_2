@@ -23,10 +23,12 @@ def menu_edit_data(select_target_func):
         " 7. Добавить/изменить комментарий к оплате (вывод в Excel)\n"
         " 8. Документы Подобъекта (уровень 2, братья месяцев)\n"
         " 9. Платежи Подобъекта (ввод сумм, формула в Excel)\n"
+        " 10. Переименовать Подобъект"
     )
-
-    sub_choice = input("Выберите действие (1-9) или 0 для Назад: ").strip()
+    sub_choice = input("Выберите действие (1-10) или 0 для Назад: ").strip()
     if sub_choice == "0":
+        return
+    if sub_choice not in ("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"):
         return
     if sub_choice not in ("1", "2", "3", "4", "5", "6", "7", "8", "9"):
         return
@@ -370,6 +372,9 @@ def menu_edit_data(select_target_func):
         return
     elif sub_choice == "5":
         wizard_common.edit_contract_sum(db, target_dir, target_sub)
+        return
+    elif sub_choice == "10":
+        wizard_common.rename_sub_object(db, target_dir, target_sub)
         return
 
     elif sub_choice == "6":

@@ -787,3 +787,25 @@ def delete_structure_simple(db, direction, sub_obj):
         db_core.save_db(db)
         wizard_git.register_action("direction_deleted")
         print(f" [УСПЕХ] Направление '{direction}' удалено.")
+
+
+def rename_sub_object(db, direction, sub_obj):
+    print("\n >> ПЕРЕИМЕНОВАНИЕ ПОДОБЪЕКТА")
+    new_sub_name = input(f"Введите новое имя для подобъекта '{sub_obj}' в направлении '{direction}': ").strip()
+    if not new_sub_name or new_sub_name == sub_obj:
+        print(" ❌ [ОШИБКА] Имя не может быть пустым или совпадать со старым!")
+        return
+
+    if new_sub_name in db[direction]:
+        print(f" ❌ [ОШИБКА] Подобъект '{new_sub_name}' уже существует в направлении '{direction}'!")
+        return
+
+    db[direction][new_sub_name] = db[direction].pop(sub_obj)
+    db["_meta"] = {
+        "last_changed_dir": direction,
+        "last_changed_sub": new_sub_name,
+        "is_new_change": True
+    }
+    db_core.save_db(db)
+    wizard_git.register_action("status_changed")
+    print(f" [УСПЕХ] Подобъект переименован в '{new_sub_name}'!")
