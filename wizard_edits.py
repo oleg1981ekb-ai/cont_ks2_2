@@ -30,8 +30,6 @@ def menu_edit_data(select_target_func):
         return
     if sub_choice not in ("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"):
         return
-    if sub_choice not in ("1", "2", "3", "4", "5", "6", "7", "8", "9"):
-        return
 
     # === ВАРИАНТ 7: комментарий к оплате ===
     if sub_choice == "7":
@@ -59,6 +57,11 @@ def menu_edit_data(select_target_func):
     # === ВАРИАНТ 9: платежи Подобъекта (без выбора месяца) ===
     if sub_choice == "9":
         wizard_common.manage_payments(db, target_dir, target_sub)
+        return
+
+    # === ВАРИАНТ 10: переименование Подобъекта ===
+    if sub_choice == "10":
+        wizard_common.rename_sub_object(db, target_dir, target_sub)
         return
 
     # === ВАРИАНТ 1: сумма месяца ===
@@ -372,9 +375,6 @@ def menu_edit_data(select_target_func):
         return
     elif sub_choice == "5":
         wizard_common.edit_contract_sum(db, target_dir, target_sub)
-        return
-    elif sub_choice == "10":
-        wizard_common.rename_sub_object(db, target_dir, target_sub)
         return
 
     elif sub_choice == "6":
