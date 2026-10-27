@@ -21,7 +21,7 @@ def select_hierarchy_target(db, allow_new=False):
         if allow_new:
             target_dir = input("База пуста. Введите название Направления: ").strip()
         else:
-            return None, None
+            return None, None, None
 
     while True:
         # --- Шаг 1: Направление ---
@@ -36,9 +36,9 @@ def select_hierarchy_target(db, allow_new=False):
             d_choice = input(f"\nВыберите номер Направления (1-{limit}) или 0 для Назад: ").strip()
 
             if d_choice == "0":
-                return None, None
+                return None, None, None
             if not d_choice or not d_choice.isdigit():
-                return None, None
+                return None, None, None
 
             d_idx = int(d_choice) - 1
             if 0 <= d_idx < len(directions):
@@ -46,10 +46,10 @@ def select_hierarchy_target(db, allow_new=False):
             elif allow_new and d_idx == len(directions):
                 target_dir = input("Введите название НОВОГО Направления: ").strip()
             else:
-                return None, None
+                return None, None, None
 
         if not target_dir:
-            return None, None
+            return None, None, None
 
         # --- Шаг 2: Подобъект ---
         if target_dir in db and db[target_dir]:
@@ -64,37 +64,56 @@ def select_hierarchy_target(db, allow_new=False):
             s_choice = input(f"Выберите номер Подобъекта (1-{limit}) или 0 для Назад: ").strip()
 
             if s_choice == "0":
-                return None, target_dir
+                return None, target_dir, None
             if not s_choice or not s_choice.isdigit():
-                return None, None
+                return None, None, None
 
             s_idx = int(s_choice) - 1
             if 0 <= s_idx < len(sub_objs):
                 target_sub = sub_objs[s_idx]
             elif allow_new and s_idx == len(sub_objs):
                 target_sub = input("Введите название НОВОГО Подобъекта: ").strip()
+                if target_sub:
+                    print("\nКуда добавить новый подобъект?")
+                    print(" 1. В начало списка")
+                    print(" 2. В конец списка (по умолчанию)")
+                    pos_choice = input("Выберите (1-2): ").strip()
+                    if pos_choice not in ("1", "2"):
+                        pos_choice = "2"
+                    return target_dir, target_sub, pos_choice
             else:
-                return None, None
+                return None, None, None
 
             if not target_sub:
-                return None, None
-            return target_dir, target_sub
+                return None, None, None
+            return target_dir, target_sub, "2"
 
         # если направлений в базе нет/пусто
         if allow_new:
             target_sub = input("Введите название Подобъекта: ").strip()
             if target_sub:
-                return target_dir, target_sub
+                return target_dir, target_sub, "2"
 
-        return None, None
+        return None, None, None
 
 def menu_add_record():
     print("\n>> ДОБАВЛЕНИЕ НОВОЙ ВЕТКИ СТРУКТУРЫ")
     db = db_core.load_db()
 
-    target_dir, target_sub = select_hierarchy_target(db, allow_new=True)
+    target_dir, target_sub, pos_choice = select_hierarchy_target(db, allow_new=True)
     if not target_dir or not target_sub:
         return
+
+    # Применить выбор позиции (1 = начало, 2 = конец)
+    if pos_choice == "1" and target_sub not in db[target_dir]:
+        # В начало: новый ключ в начале существующего dict
+        old_dict = db[target_dir]
+        new_dict = {target_sub: {}} | old_dict
+        db[target_dir] = new_dict
+    else:
+        # В конец (по умолчанию) - просто добавляем
+        if target_sub not in db[target_dir]:
+            db[target_dir][target_sub] = {}
 
     while True:
         print("\nВыберите Месяц из календаря:")
