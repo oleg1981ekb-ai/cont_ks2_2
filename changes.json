@@ -4,6 +4,16 @@
             "status": "processed_and_deleted",
             "date": "2026-10-25",
             "description": "Ветка отработана и удалена. Все изменения (новые колонки D/G, extra_docs, маски DOCUMENT_ROLES, пункт меню 6) влиты в main и закоммичены (826cb4d)."
+        },
+        "feature/split-wizard-common": {
+            "status": "merged_and_push",
+            "date": "2026-10-27",
+            "description": "Разбит wizard_common.py на пакет wizard_common/crud/ (month, status, structure, sub_objects). Добавлена command /task_done."
+        },
+        "feature/add-sub-object-position": {
+            "status": "merged_and_push",
+            "date": "2026-10-27",
+            "description": "Добавлен выбор позиции подобъекта при создании: в начало / в конец списка. Изменён select_hierarchy_target для возврата 3-tuple (dir, sub, pos)."
         }
     },
     "01_271_КН||└─ Дата изменения СтрК: 02.07||Июль": {

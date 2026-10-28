@@ -64,3 +64,26 @@
 - [ ] A4) Если останется проблема — править `wizard_edits.py`/`wizard_edits_new.py`, чтобы сохраняли статусы в БД в корректном формате (документ-ориентированно), без плоского `col_key` для всего документа.
 
 
+## Завершённые задачи (июль 2026)
+
+### feature/split-wizard-common (2026-10-27)
+- [x] Разбит `wizard_common.py` (811 строк) на `wizard_common/crud/` подмодули:
+  - `crud/month.py`: `select_month`, `edit_month_sum`, `rename_month`
+  - `crud/status.py`: `_normalize_status_for_month`, `edit_status`
+  - `crud/structure.py`: `delete_structure`, `rename_direction`, `delete_structure_simple`, `rename_sub_object`
+  - `crud/sub_objects.py`: `manage_sub_docs`, `manage_payments`, `manage_extra_docs`, `edit_contract_sum`, `manage_payment_comment`
+  - `wizard_common/__init__.py`: ре-экспорт всех функций для обратной совместимости
+- [x] Старый `wizard_common.py` удалён
+- [x] `import wizard_common` работает без изменений в `wizard_edits.py` / `wizard_edits_new.py`
+- [x] Все .py проходят `py_compile`
+
+### feature/add-sub-object-position (2026-10-27)
+- [x] Добавлен выбор позиции при создании нового подобъекта (1 = начало, 2 = конец/по умолчанию)
+- [x] `select_hierarchy_target` возвращает 3-кортеж: `(target_dir, target_sub, pos_choice)`
+- [x] `menu_add_record` применяет позицию: `new_dict = {target_sub: {}} | old_dict` для начала, или `db[dir][sub] = {}` для конца
+- [x] `wizard_menus.py` компилируется, импорт работает
+
+### Остальное (2026-10-27)
+- [x] Добавлена команда `/task_done` (`.kilo/command/task_done.md`)
+- [x] Обновлены `_changelog` записи в `changes.json`
+- [x] Ветки мерджены в `main`, пуш в `origin/main` выполнен
