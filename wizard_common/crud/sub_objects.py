@@ -153,9 +153,11 @@ def manage_payments(db, direction, sub_obj):
             print(f"  Итого: {db_core.fmt_money(total)} руб.")
 
         print("\n 1. Добавить платёж")
-        print(" 2. Очистить все платежи")
+        print(" 2. Изменить платёж по номеру")
+        print(" 3. Удалить платёж по номеру")
+        print(" 4. Очистить все платежи")
         print(" 0. Назад в главное меню изменений")
-        pay_choice = input("\nВыберите действие (0-2): ").strip()
+        pay_choice = input("\nВыберите действие (0-4): ").strip()
 
         if pay_choice == "0":
             return
@@ -185,6 +187,64 @@ def manage_payments(db, direction, sub_obj):
             print(f" [УСПЕХ] Платёж {db_core.fmt_money(pay_val)} руб. добавлен.")
 
         elif pay_choice == "2":
+            if not payments:
+                print(" Платежи не найдены для изменения.")
+                continue
+            num = input("Введите номер платежа для изменения: ").strip()
+            if not num.isdigit():
+                print(" ❌ Введите число.")
+                continue
+            idx = int(num) - 1
+            if idx < 0 or idx >= len(payments):
+                print(" ❌ Неверный номер.")
+                continue
+            print(f" Текущее значение: {db_core.fmt_money(payments[idx])} руб.")
+            new_str = input("Введите новую сумму платежа (руб.): ").strip()
+            if not new_str:
+                print(" ❌ Сумма не может быть пустой.")
+                continue
+            try:
+                new_val = float(new_str.replace(" ", "").replace(",", "."))
+                if new_val < 0:
+                    print(" ❌ Сумма платежа не может быть отрицательной!")
+                    continue
+            except ValueError:
+                print(" ❌ Введите число без букв!")
+                continue
+            old_val = payments[idx]
+            payments[idx] = new_val
+            db["_meta"] = {
+                "last_changed_dir": direction,
+                "last_changed_sub": sub_obj,
+                "is_new_change": True,
+            }
+            db_core.save_db(db)
+            wizard_git.register_action("status_changed")
+            print(f" [УСПЕХ] Платёж изменён: {db_core.fmt_money(old_val)} → {db_core.fmt_money(new_val)} руб.")
+
+        elif pay_choice == "3":
+            if not payments:
+                print(" Платежи не найдены для удаления.")
+                continue
+            num = input("Введите номер платежа для удаления: ").strip()
+            if not num.isdigit():
+                print(" ❌ Введите число.")
+                continue
+            idx = int(num) - 1
+            if idx < 0 or idx >= len(payments):
+                print(" ❌ Неверный номер.")
+                continue
+            removed = payments.pop(idx)
+            db["_meta"] = {
+                "last_changed_dir": direction,
+                "last_changed_sub": sub_obj,
+                "is_new_change": True,
+            }
+            db_core.save_db(db)
+            wizard_git.register_action("status_changed")
+            print(f" [УСПЕХ] Платёж {db_core.fmt_money(removed)} руб. удалён.")
+
+        elif pay_choice == "4":
             confirm = input("Подтвердите удаление всех платежей? (1=Да / 2=Нет): ").strip()
             if confirm != "1":
                 continue
