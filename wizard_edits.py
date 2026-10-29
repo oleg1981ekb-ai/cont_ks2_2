@@ -33,7 +33,7 @@ def menu_edit_data(select_target_func):
 
     # === ВАРИАНТ 7: комментарий к оплате ===
     if sub_choice == "7":
-        target_dir, target_sub = select_target_func(db)
+        target_dir, target_sub, _ = select_target_func(db, allow_new=False)
         if not target_dir or not target_sub:
             return
 
@@ -41,7 +41,7 @@ def menu_edit_data(select_target_func):
         return
 
     # === Общая точка выбора (direction/sub_obj) для остальных пунктов ===
-    target_dir, target_sub = select_target_func(db, allow_new=False)
+    target_dir, target_sub, _ = select_target_func(db, allow_new=False)
     if target_dir is None and target_sub is None:
         return
     if target_dir is None and target_sub is not None:
@@ -428,7 +428,7 @@ def menu_edit_data(select_target_func):
 
 def action_rename_direction_core(db, select_target_func):
     print("\n >> ПЕРЕИМЕНОВАНИЕ НАПРАВЛЕНИЯ")
-    target_dir, _ = select_target_func(db, allow_new=False)
+    target_dir, _, _ = select_target_func(db, allow_new=False)
     if not target_dir:
         print(" Переименование отменено.")
         return

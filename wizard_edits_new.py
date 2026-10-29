@@ -24,7 +24,7 @@ def menu_edit_data(select_target_func):
         return
 
     # Общая точка выбора (direction/sub_obj). Для варианта 4 могут потребоваться дополнительные шаги выбора.
-    target_dir, target_sub = select_target_func(db, allow_new=False)
+    target_dir, target_sub, _ = select_target_func(db, allow_new=False)
     if not target_dir or not target_sub:
         return
 
