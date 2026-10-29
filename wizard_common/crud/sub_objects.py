@@ -26,8 +26,9 @@ def manage_sub_docs(db, direction, sub_obj):
 
         print("\n 1. Добавить документ")
         print(" 2. Удалить документ по номеру")
+        print(" 3. Редактировать документ (статус/дата/комментарий)")
         print(" 0. Назад в главное меню изменений")
-        doc_choice = input("\nВыберите действие (0-2): ").strip()
+        doc_choice = input("\nВыберите действие (0-3): ").strip()
 
         if doc_choice == "0":
             break
@@ -87,6 +88,49 @@ def manage_sub_docs(db, direction, sub_obj):
             db_core.save_db(db)
             wizard_git.register_action("status_changed")
             print(f" [УСПЕХ] Документ '{removed.get('name', '')}' удален.")
+
+        elif doc_choice == "3":
+            if not sub_docs:
+                print(" Нет документов для редактирования.")
+                continue
+            num = input("Введите номер документа для редактирования: ").strip()
+            if not num.isdigit():
+                print(" ❌ Введите число.")
+                continue
+            idx = int(num) - 1
+            if idx < 0 or idx >= len(sub_docs):
+                print(" ❌ Неверный номер.")
+                continue
+            doc = sub_docs[idx]
+            print(f"\n[РЕДАКТИРОВАНИЕ] Документ: {doc.get('name', '')}")
+            print(" 1. Изменить статус (1/2/3/0)")
+            print(" 2. Изменить дату (ДД.ММ)")
+            print(" 3. Изменить комментарий")
+            edit_choice = input("Выберите (1-3): ").strip()
+            if edit_choice == "1":
+                doc["status"] = ""
+                st = input("Статус: 1. Зеленый | 2. Желтый | 3. Красный | 0. Без статуса: ").strip()
+                if st == "1":
+                    doc["status"] = 1
+                elif st == "2":
+                    doc["status"] = 2
+                elif st == "3":
+                    doc["status"] = 3
+                else:
+                    doc["status"] = ""
+            elif edit_choice == "2":
+                doc["date"] = input("Новая дата (ДД.ММ): ").strip()
+            elif edit_choice == "3":
+                doc["comment"] = input("Новый комментарий: ").strip()
+
+            db["_meta"] = {
+                "last_changed_dir": direction,
+                "last_changed_sub": sub_obj,
+                "is_new_change": True,
+            }
+            db_core.save_db(db)
+            wizard_git.register_action("status_changed")
+            print(f" [УСПЕХ] Документ '{doc.get('name', '')}' обновлен.")
 
         else:
             print(" ❌ Неверный выбор.")
