@@ -24,6 +24,11 @@
             "status": "merged_and_push",
             "date": "2026-10-29",
             "description": "Добавлены пункты меню в manage_payments: изменить платёж по номеру (2) и удалить платёж по номеру (3). Сдвинуты 'Очистить все' на 4."
+        },
+        "feature/separate-sub-docs-file": {
+            "status": "merged_and_push",
+            "date": "2026-10-30",
+            "description": "Добавлена возможность переноса документов-братьев в отдельный Excel-файл 'Документы_Подобъектов.xlsx': меню пункта 4 manage_sub_docs (перенести в архив), функция build_archived_docs_file в builder.py, вызов из main.py."
         }
     },
     "01_271_КН||└─ Дата изменения СтрК: 02.07||Июль": {
