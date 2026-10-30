@@ -486,3 +486,83 @@ def build_structure(ws, mock_data=None, saved_statuses=None, saved_sums=None):
 
     return ws.max_row
 
+
+def build_archived_docs_file(db, archive_path):
+    """Генерирует отдельный Excel-файл с архивными документами подобъектов.
+    Один лист, секции по подобъектам, колонки: A (№ п/п), B (Наименование), C (Комментарий)."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Архивные документы"
+    ws.sheet_view.showGridLines = True
+    ws.sheet_view.showOutlineSymbols = False
+
+    ws.append(["№ п/п", "Наименование", "Комментарий"])
+    ws.row_dimensions[1].height = 22
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    thin_border = Border(
+        left=Side(style="thin", color="B0B0B0"),
+        right=Side(style="thin", color="B0B0B0"),
+        top=Side(style="thin", color="B0B0B0"),
+        bottom=Side(style="thin", color="B0B0B0"),
+    )
+    for col_idx in range(1, 4):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = thin_border
+
+    row_counter = 2
+    for direction in sorted(db.keys()):
+        if direction.startswith("_") or not isinstance(db[direction], dict):
+            continue
+        sub_objs = db[direction]
+        for sub_obj in sorted(sub_objs.keys()):
+            if not isinstance(sub_objs[sub_obj], dict):
+                continue
+            archived_docs = sub_objs[sub_obj].get("documents_archived", [])
+            if not isinstance(archived_docs, list) or not archived_docs:
+                continue
+
+            # Заголовок секции подобъекта
+            ws.append([f"Подобъект: {sub_obj}", "", ""])
+            ws.row_dimensions[ws.max_row].height = 20
+            for col_idx in range(1, 4):
+                cell = ws.cell(row=ws.max_row, column=col_idx)
+                cell.font = Font(name="Calibri", size=11, bold=True, color="1F4E78")
+                cell.fill = PatternFill(start_color="DDEBF7", end_color="DDEBF7", fill_type="solid")
+                cell.border = thin_border
+            row_counter += 1
+
+            for idx, doc in enumerate(archived_docs, 1):
+                name = str(doc.get("name", ""))
+                comment = str(doc.get("comment", ""))
+                ws.append([idx, name, comment])
+                ws.row_dimensions[ws.max_row].height = 20
+                for col_idx in range(1, 4):
+                    cell = ws.cell(row=ws.max_row, column=col_idx)
+                    cell.border = thin_border
+                    cell.font = Font(name="Calibri", size=11)
+                    if col_idx == 1:
+                        cell.alignment = Alignment(horizontal="center", vertical="center")
+                    else:
+                        cell.alignment = Alignment(horizontal="left", vertical="center")
+                row_counter += 1
+
+            # Пустая строка между секциями
+            ws.append(["", "", ""])
+            row_counter += 1
+
+    ws.column_dimensions["A"].width = 8
+    ws.column_dimensions["B"].width = 50
+    ws.column_dimensions["C"].width = 50
+
+    try:
+        wb.save(archive_path)
+        print(f" [УСПЕХ] Архивный файл сохранён: {archive_path}")
+    except Exception as e:
+        print(f" ❌ [ОШИБКА] Не удалось сохранить архивный файл: {e}")
+

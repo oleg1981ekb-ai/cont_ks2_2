@@ -4,6 +4,7 @@ import config
 import storage
 import builder
 import formatter
+import db_core
 
 def run():
     print("⚙️ [Автоматический запуск] Сборка смарт-трекера...")
@@ -53,6 +54,12 @@ def run():
         print("❌ [ОШИБКА ДОСТУПА] Файл Excel/LibreOffice открыт! Закройте его для генерации.")
     except Exception as e:
         print(f"❌ [КРИТИЧЕСКИЙ СБОЙ] Запись сорвалась: {e}")
+
+    # 6. Генерация отдельного файла архивных документов
+    db = db_core.load_db()
+    if db and isinstance(db, dict):
+        archive_path = os.path.join(os.path.dirname(file_path) or ".", "Документы_Подобъектов.xlsx")
+        builder.build_archived_docs_file(db, archive_path)
 
 if __name__ == "__main__":
     run()

@@ -9,6 +9,11 @@ def manage_sub_docs(db, direction, sub_obj):
         sub_docs = []
         db[direction][sub_obj]["documents"] = sub_docs
 
+    archived_docs = db[direction][sub_obj].setdefault("documents_archived", [])
+    if not isinstance(archived_docs, list):
+        archived_docs = []
+        db[direction][sub_obj]["documents_archived"] = archived_docs
+
     while True:
         print(f"\n>>> ДОКУМЕНТЫ ПОДОБЪЕКТА '{sub_obj}' (уровень 2, братья месяцев)")
         if not sub_docs:
@@ -24,11 +29,15 @@ def manage_sub_docs(db, direction, sub_obj):
                 comment_txt = f" — {comment}" if comment else ""
                 print(f"  {idx}. {name}{date_txt}{status_txt}{comment_txt}")
 
+        if archived_docs:
+            print(f"  [Архив: {len(archived_docs)}]")
+
         print("\n 1. Добавить документ")
         print(" 2. Удалить документ по номеру")
         print(" 3. Редактировать документ (статус/дата/комментарий)")
+        print(" 4. Перенести в архив (удалить из основного списка)")
         print(" 0. Назад в главное меню изменений")
-        doc_choice = input("\nВыберите действие (0-3): ").strip()
+        doc_choice = input("\nВыберите действие (0-4): ").strip()
 
         if doc_choice == "0":
             break
@@ -131,6 +140,29 @@ def manage_sub_docs(db, direction, sub_obj):
             db_core.save_db(db)
             wizard_git.register_action("status_changed")
             print(f" [УСПЕХ] Документ '{doc.get('name', '')}' обновлен.")
+
+        elif doc_choice == "4":
+            if not sub_docs:
+                print(" Нет документов для переноса в архив.")
+                continue
+            num = input("Введите номер документа для переноса в архив: ").strip()
+            if not num.isdigit():
+                print(" ❌ Введите число.")
+                continue
+            idx = int(num) - 1
+            if idx < 0 or idx >= len(sub_docs):
+                print(" ❌ Неверный номер.")
+                continue
+            archived = sub_docs.pop(idx)
+            archived_docs.append(archived)
+            db["_meta"] = {
+                "last_changed_dir": direction,
+                "last_changed_sub": sub_obj,
+                "is_new_change": True,
+            }
+            db_core.save_db(db)
+            wizard_git.register_action("status_changed")
+            print(f" [УСПЕХ] Документ '{archived.get('name', '')}' перенесён в архив.")
 
         else:
             print(" ❌ Неверный выбор.")
