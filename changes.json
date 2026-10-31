@@ -31,9 +31,9 @@
             "description": "Добавлена возможность переноса документов-братьев в отдельный Excel-файл 'Документы_Подобъектов.xlsx': меню пункта 4 manage_sub_docs (перенести в архив), функция build_archived_docs_file в builder.py, вызов из main.py."
         },
         "feature/update-agents-doc": {
-            "status": "merged",
+            "status": "merged_and_push",
             "date": "2026-10-31",
-            "description": "В AGENTS.md добавлен раздел «Проверка синтаксиса перед запуском и коммитом»: команда compileall, обоснование и ограничения. Влито в main fast-forward (a787056); push не выполнялся."
+            "description": "В AGENTS.md добавлен раздел «Проверка синтаксиса перед запуском и коммитом»: команда compileall, обоснование и ограничения. Влито в main fast-forward (a787056) и отправлено в origin."
         }
     },
     "01_271_КН||└─ Дата изменения СтрК: 02.07||Июль": {
