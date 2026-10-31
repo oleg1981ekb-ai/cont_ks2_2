@@ -102,6 +102,13 @@
 - [x] `docs/GIT_WORKFLOW.md` доведён до production-grade: синхронизация/rebase, границы diff, резервные копии данных, `--ff-only`/`--no-ff`, конфликты `database.json`, changelog/TODO, откат, расширенный чек-лист.
 - [x] В `database.json` документ «Доп. соглашение №1» перенесён из `documents` в `documents_archived`.
 
+### feature/project-context-docs (2026-10-31)
+- [x] Добавлен `docs/HANDOFF.md` — снимок состояния, проверки, следующие шаги и риски.
+- [x] Добавлен `docs/DECISIONS.md` — журнал решений с причинами и последствиями.
+- [x] Добавлен `requirements.txt` (openpyxl, PyMuPDF, Google API).
+- [x] `AGENTS.md`: порядок восстановления контекста и новые файлы в карте проекта.
+- [x] `.gitignore`: `venv/`, `.env`, бэкапы `database.json`/`.xlsx`, `ai_project_snapshot.*`.
+
 ### Остальное (2026-10-27)
 - [x] Добавлена команда `/task_done` (`.kilo/command/task_done.md`)
 - [x] Обновлены `_changelog` записи в `changes.json`

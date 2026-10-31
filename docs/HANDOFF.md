@@ -7,7 +7,7 @@
 ## Состояние на 2026-10-31
 
 - Ветка: `main`, синхронизирована с `origin/main`.
-- Последний commit до этой сессии: `3785942 docs: mark feature/merge-practice as merged_and_push`.
+- Последний commit: `97825ab docs: add handoff, decisions, requirements and context links` (влит fast-forward).
 - Рабочее дерево: чистое (кроме игнорируемых `.xlsx`/`__pycache__`).
 - Python: 3.14.7 (macOS). Зависимости — см. `requirements.txt`.
 
