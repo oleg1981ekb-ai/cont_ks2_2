@@ -95,6 +95,9 @@
 ### feature/separate-sub-docs-file (2026-10-30)
 - [x] Добавлена возможность переноса документов-братьев в отдельный Excel-файл 'Документы_Подобъектов.xlsx': меню пункта 4 manage_sub_docs (перенести в архив), функция build_archived_docs_file в builder.py, вызов из main.py.
 
+### feature/update-agents-doc (2026-10-31)
+- [x] В `AGENTS.md` добавлен раздел «Проверка синтаксиса перед запуском и коммитом»: команда `compileall`, обоснование и ограничения. Влито в `main` fast-forward (a787056).
+
 ### Остальное (2026-10-27)
 - [x] Добавлена команда `/task_done` (`.kilo/command/task_done.md`)
 - [x] Обновлены `_changelog` записи в `changes.json`
