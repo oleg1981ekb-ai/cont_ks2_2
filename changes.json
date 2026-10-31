@@ -41,9 +41,9 @@
             "description": "docs/GIT_WORKFLOW.md доведён до production-grade: синхронизация и rebase, границы diff, резервные копии, merge --ff-only/--no-ff, конфликты database.json, changelog/TODO, откат, расширенный чек-лист. В database.json документ «Доп. соглашение №1» перенесён в documents_archived. Влито в main fast-forward (d06b555, d2a9b5a) и отправлено в origin."
         },
         "feature/project-context-docs": {
-            "status": "merged",
+            "status": "merged_and_push",
             "date": "2026-10-31",
-            "description": "Добавлены docs/HANDOFF.md и docs/DECISIONS.md, requirements.txt, обновлены AGENTS.md (порядок восстановления контекста, карта файлов) и .gitignore (venv, .env, бэкапы). Зафиксирован снимок состояния проекта."
+            "description": "Добавлены docs/HANDOFF.md и docs/DECISIONS.md, requirements.txt, обновлены AGENTS.md (порядок восстановления контекста, карта файлов) и .gitignore (venv, .env, бэкапы). Влито в main fast-forward (97825ab) и отправлено в origin."
         }
     },
     "01_271_КН||└─ Дата изменения СтрК: 02.07||Июль": {
