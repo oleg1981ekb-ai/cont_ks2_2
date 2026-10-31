@@ -98,6 +98,10 @@
 ### feature/update-agents-doc (2026-10-31)
 - [x] В `AGENTS.md` добавлен раздел «Проверка синтаксиса перед запуском и коммитом»: команда `compileall`, обоснование и ограничения. Влито в `main` fast-forward (a787056).
 
+### feature/merge-practice (2026-10-31)
+- [x] `docs/GIT_WORKFLOW.md` доведён до production-grade: синхронизация/rebase, границы diff, резервные копии данных, `--ff-only`/`--no-ff`, конфликты `database.json`, changelog/TODO, откат, расширенный чек-лист.
+- [x] В `database.json` документ «Доп. соглашение №1» перенесён из `documents` в `documents_archived`.
+
 ### Остальное (2026-10-27)
 - [x] Добавлена команда `/task_done` (`.kilo/command/task_done.md`)
 - [x] Обновлены `_changelog` записи в `changes.json`
