@@ -4,3 +4,9 @@ __pycache__/
 .DS_Store
 database_before.json
 
+venv/
+.env
+database.json.bak-*
+*.bak-*.xlsx
+ai_project_snapshot.*
+
