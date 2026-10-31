@@ -36,9 +36,9 @@
             "description": "В AGENTS.md добавлен раздел «Проверка синтаксиса перед запуском и коммитом»: команда compileall, обоснование и ограничения. Влито в main fast-forward (a787056) и отправлено в origin."
         },
         "feature/merge-practice": {
-            "status": "merged",
+            "status": "merged_and_push",
             "date": "2026-10-31",
-            "description": "docs/GIT_WORKFLOW.md доведён до production-grade: синхронизация и rebase, границы diff, резервные копии, merge --ff-only/--no-ff, конфликты database.json, changelog/TODO, откат, расширенный чек-лист. В database.json документ «Доп. соглашение №1» перенесён в documents_archived."
+            "description": "docs/GIT_WORKFLOW.md доведён до production-grade: синхронизация и rebase, границы diff, резервные копии, merge --ff-only/--no-ff, конфликты database.json, changelog/TODO, откат, расширенный чек-лист. В database.json документ «Доп. соглашение №1» перенесён в documents_archived. Влито в main fast-forward (d06b555, d2a9b5a) и отправлено в origin."
         }
     },
     "01_271_КН||└─ Дата изменения СтрК: 02.07||Июль": {
